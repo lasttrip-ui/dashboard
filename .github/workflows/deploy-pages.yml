@@ -3,7 +3,7 @@ name: Deploy dashboard to GitHub Pages
 on:
   push:
     branches:
-      - claude/focused-meitner-75iYV
+      - main
   workflow_dispatch:
 
 permissions:
