@@ -29,13 +29,9 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { href: "/", label: "Vista general", icon: LayoutGrid },
-  { href: "/contenido", label: "Contenido", icon: BookOpen },
-  { href: "/informes", label: "Informes", icon: FileText },
-  { href: "/operativa", label: "Operativa", icon: CandlestickChart },
   { href: "/cartera", label: "Cartera", icon: Briefcase },
+  { href: "/operativa", label: "Operativa", icon: CandlestickChart },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen },
-  { href: "/favoritos", label: "Favoritos", icon: Bookmark },
 ]
 
 function isActive(pathname: string, href: string) {

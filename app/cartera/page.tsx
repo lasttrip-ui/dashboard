@@ -1,72 +1,97 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Upload, TrendingUp, TrendingDown, X, BarChart2, RefreshCw } from "lucide-react"
+import { Upload, RefreshCw, X, TrendingUp, TrendingDown, Briefcase } from "lucide-react"
 import { parseDeGiroCSV, buildPositions, type Position } from "@/lib/degiro"
 import { usePortfolio } from "@/lib/imported-portfolio"
+import { useImportedTrades } from "@/lib/imported-trades"
+import IBFlexImport from "@/components/lab/IBFlexImport"
+import type { OptionTrade } from "@/lib/data"
 
-function pct(val: number, total: number) {
-  if (!total) return 0
-  return (val / total) * 100
+// Net premium collected per IB trade (in USD, per-contract × 100 shares)
+function netPremium(t: OptionTrade): number {
+  if (t.status === "closed" && t.closePrice !== undefined) {
+    return (t.premium - t.closePrice) * t.qty * 100
+  }
+  return t.premium * t.qty * 100
 }
 
-function fmt(n: number, decimals = 2) {
-  return n.toLocaleString("es-ES", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+function fmt(n: number, dec = 2) {
+  return n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 
-function PositionRow({ pos, rank }: { pos: Position; rank: number }) {
-  const pnlPct = pos.totalInvested > 0 ? pct(pos.realizedPnl, pos.totalInvested) : 0
-  const isProfit = pos.realizedPnl >= 0
+function fmtSign(n: number, dec = 2) {
+  return `${n >= 0 ? "+" : ""}${fmt(n, dec)}`
+}
 
-  return (
-    <tr style={{ borderBottom: "1px solid var(--border)" }}>
-      <td style={{ padding: "12px 16px", color: "var(--text-secondary)", fontSize: 12 }}>{rank}</td>
-      <td style={{ padding: "12px 16px" }}>
-        <div style={{ fontWeight: 600, fontSize: 14 }}>{pos.ticker}</div>
-        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>{pos.isin}</div>
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "right" }}>
-        {pos.shares > 0 ? (
-          <span style={{ fontWeight: 600 }}>{fmt(pos.shares, pos.shares % 1 === 0 ? 0 : 2)}</span>
-        ) : (
-          <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>Cerrada</span>
-        )}
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "right", fontSize: 13 }}>
-        {pos.avgCost > 0 ? `${fmt(pos.avgCost)} €` : "—"}
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "right", fontSize: 13 }}>
-        {pos.totalInvested > 0 ? `${fmt(pos.totalInvested)} €` : "—"}
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "right" }}>
-        <div style={{ fontWeight: 600, fontSize: 13, color: isProfit ? "var(--green)" : pos.realizedPnl < 0 ? "var(--red)" : "var(--text-secondary)" }}>
-          {pos.realizedPnl !== 0 ? `${isProfit ? "+" : ""}${fmt(pos.realizedPnl)} €` : "—"}
-        </div>
-        {pnlPct !== 0 && (
-          <div style={{ fontSize: 11, color: isProfit ? "var(--green)" : "var(--red)" }}>
-            {isProfit ? "+" : ""}{fmt(pnlPct)}%
-          </div>
-        )}
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "center" }}>
-        <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 12, background: "var(--bg-hover)", color: "var(--text-secondary)" }}>
-          {pos.bolsa || "—"}
-        </span>
-      </td>
-    </tr>
-  )
+interface UnifiedRow {
+  ticker: string
+  isin: string
+  // DeGiro
+  shares: number
+  avgCost: number      // EUR per share
+  totalInvested: number
+  degiroRealizedPnl: number
+  // IB premiums (USD converted loosely — we show as-is, same currency note)
+  ibPremiumsUSD: number
+  ibTradeCount: number
+  // Effective cost
+  effectiveCostPerShare: number  // (totalInvested - ibPremiums converted) / shares
+}
+
+function buildUnified(positions: Position[], ibTrades: OptionTrade[]): UnifiedRow[] {
+  // Group IB premiums by ticker
+  const ibByTicker = new Map<string, { premium: number; count: number }>()
+  for (const t of ibTrades) {
+    const key = t.ticker.toUpperCase()
+    const existing = ibByTicker.get(key) ?? { premium: 0, count: 0 }
+    ibByTicker.set(key, { premium: existing.premium + netPremium(t), count: existing.count + 1 })
+  }
+
+  const rows: UnifiedRow[] = []
+
+  // DeGiro positions
+  for (const pos of positions) {
+    const ticker = pos.ticker.toUpperCase().split(" ")[0]
+    const ib = ibByTicker.get(ticker) ?? { premium: 0, count: 0 }
+    // Rough USD→EUR at 1.08 (user can see it's approximate)
+    const ibEur = ib.premium / 1.08
+    const effectiveCost = pos.shares > 0 ? (pos.totalInvested - ibEur) / pos.shares : pos.avgCost
+
+    rows.push({
+      ticker,
+      isin: pos.isin,
+      shares: pos.shares,
+      avgCost: pos.avgCost,
+      totalInvested: pos.totalInvested,
+      degiroRealizedPnl: pos.realizedPnl,
+      ibPremiumsUSD: ib.premium,
+      ibTradeCount: ib.count,
+      effectiveCostPerShare: effectiveCost,
+    })
+  }
+
+  // IB-only tickers (no DeGiro position)
+  ibByTicker.forEach((ib, ticker) => {
+    if (rows.find(r => r.ticker === ticker)) return
+    rows.push({ ticker, isin: "", shares: 0, avgCost: 0, totalInvested: 0, degiroRealizedPnl: 0, ibPremiumsUSD: ib.premium, ibTradeCount: ib.count, effectiveCostPerShare: 0 })
+  })
+
+  return rows.sort((a, b) => b.totalInvested - a.totalInvested)
 }
 
 export default function CarteraPage() {
   const fileRef = useRef<HTMLInputElement>(null)
-  const [error, setError] = useState("")
-  const [filter, setFilter] = useState<"todas" | "abiertas" | "cerradas">("todas")
-  const { positions, meta, save, clear } = usePortfolio()
+  const [csvError, setCsvError] = useState("")
+  const [filter, setFilter] = useState<"todas" | "abiertas" | "cerradas">("abiertas")
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  const { positions, meta: dMeta, save, clear: clearDegiro } = usePortfolio()
+  const { importedTrades, meta: ibMeta, saveResult, clear: clearIB } = useImportedTrades()
+
+  function handleCSV(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setError("")
+    setCsvError("")
     const reader = new FileReader()
     reader.onload = (ev) => {
       try {
@@ -75,23 +100,25 @@ export default function CarteraPage() {
         const pos = buildPositions(rows)
         save(rows, pos, file.name)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al parsear el CSV")
+        setCsvError(err instanceof Error ? err.message : "Error al parsear el CSV")
       }
     }
     reader.readAsText(file)
     e.target.value = ""
   }
 
-  const open = positions.filter(p => p.shares > 0.001)
-  const closed = positions.filter(p => p.shares <= 0.001 && p.realizedPnl !== 0)
-  const visible = filter === "abiertas" ? open : filter === "cerradas" ? closed : positions.filter(p => p.shares > 0.001 || p.realizedPnl !== 0)
+  const unified = buildUnified(positions, importedTrades)
+  const open = unified.filter(r => r.shares > 0.001)
+  const closed = unified.filter(r => r.shares <= 0.001 && (r.degiroRealizedPnl !== 0 || r.ibPremiumsUSD !== 0))
+  const ibOnly = unified.filter(r => r.shares <= 0.001 && r.ibPremiumsUSD !== 0 && r.degiroRealizedPnl === 0)
+  const visible = filter === "abiertas" ? open : filter === "cerradas" ? closed : unified.filter(r => r.shares > 0.001 || r.degiroRealizedPnl !== 0 || r.ibPremiumsUSD !== 0)
 
-  const totalInvested = open.reduce((s, p) => s + p.totalInvested, 0)
-  const totalRealized = positions.reduce((s, p) => s + p.realizedPnl, 0)
-  const winners = closed.filter(p => p.realizedPnl > 0).length
-  const winRate = closed.length > 0 ? (winners / closed.length) * 100 : 0
+  const totalInvested = open.reduce((s, r) => s + r.totalInvested, 0)
+  const totalIBPremiums = unified.reduce((s, r) => s + r.ibPremiumsUSD, 0)
+  const totalRealized = unified.reduce((s, r) => s + r.degiroRealizedPnl, 0)
+  const totalEffectiveSaving = totalIBPremiums / 1.08
 
-  const metaDate = meta?.importedAt ? new Date(meta.importedAt).toLocaleDateString("es-ES") : null
+  const hasAnyData = dMeta || ibMeta
 
   return (
     <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -99,58 +126,68 @@ export default function CarteraPage() {
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)" }}>
-            DeGiro
+            Portfolio unificado
           </span>
-          <h1 style={{ fontSize: 30, margin: "6px 0 0" }}>Cartera de acciones</h1>
+          <h1 style={{ fontSize: 30, margin: "6px 0 0" }}>Mi Cartera</h1>
           <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
-            {meta ? `${meta.rowCount} transacciones · ${meta.filename} · importado ${metaDate}` : "Importa tu CSV de transacciones de DeGiro"}
+            Posiciones DeGiro + primas capturadas en Interactive Brokers
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {meta && (
-            <button type="button" onClick={clear} title="Eliminar datos" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 4 }}>
-              <X size={16} />
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {/* DeGiro import */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {dMeta && (
+              <button type="button" onClick={clearDegiro} title="Eliminar DeGiro" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 2 }}>
+                <X size={14} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 14px", borderRadius: 8,
+                border: "1px solid var(--border)",
+                background: dMeta ? "var(--amber-dim)" : "var(--bg-card)",
+                color: dMeta ? "var(--amber)" : "var(--text-secondary)",
+                cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "var(--font-sans)",
+              }}
+            >
+              {dMeta ? <RefreshCw size={13} /> : <Upload size={13} />}
+              {dMeta ? "DeGiro ✓" : "CSV DeGiro"}
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "9px 16px", borderRadius: 8, border: "none", cursor: "pointer",
-              background: "var(--amber)", color: "#0b1120", fontWeight: 600, fontSize: 14, fontFamily: "var(--font-sans)",
-            }}
-          >
-            {meta ? <RefreshCw size={15} /> : <Upload size={15} />}
-            {meta ? "Actualizar CSV" : "Importar CSV"}
-          </button>
-          <input ref={fileRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleFile} />
+            <input ref={fileRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
+          </div>
+
+          {/* IB import */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {ibMeta && (
+              <button type="button" onClick={clearIB} title="Eliminar IB" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 2 }}>
+                <X size={14} />
+              </button>
+            )}
+            <IBFlexImport meta={ibMeta} onImport={saveResult} onClear={clearIB} />
+          </div>
         </div>
       </header>
 
-      {error && (
+      {csvError && (
         <div style={{ padding: "10px 16px", borderRadius: 8, background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.3)", color: "var(--red)", fontSize: 13 }}>
-          {error}
+          {csvError}
         </div>
       )}
 
-      {!meta ? (
-        /* Empty state */
-        <div
-          onClick={() => fileRef.current?.click()}
-          style={{
-            border: "2px dashed var(--border)", borderRadius: 16, padding: 64,
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-            cursor: "pointer", textAlign: "center",
-          }}
-        >
-          <Upload size={32} style={{ color: "var(--text-secondary)" }} />
-          <div style={{ fontSize: 16, fontWeight: 600 }}>Sube tu CSV de DeGiro</div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 380 }}>
-            Exporta desde DeGiro → Actividad → Exportar → Transacciones. El archivo se procesa en tu navegador, nunca sale de tu dispositivo.
+      {!hasAnyData ? (
+        <div style={{ border: "2px dashed var(--border)", borderRadius: 16, padding: 64, display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center" }}>
+          <Briefcase size={36} style={{ color: "var(--text-secondary)" }} />
+          <div style={{ fontSize: 18, fontWeight: 600 }}>Conecta tus cuentas</div>
+          <div style={{ fontSize: 14, color: "var(--text-secondary)", maxWidth: 400 }}>
+            Importa el CSV de DeGiro para ver tus posiciones de acciones, y conecta Interactive Brokers para ver las primas capturadas con opciones sobre esas mismas acciones.
           </div>
-          <div style={{ fontSize: 12, color: "var(--amber)", marginTop: 4 }}>
-            Haz clic o arrastra el archivo aquí
+          <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap", justifyContent: "center" }}>
+            <button type="button" onClick={() => fileRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer", background: "var(--amber)", color: "#0b1120", fontWeight: 600, fontSize: 14, fontFamily: "var(--font-sans)" }}>
+              <Upload size={15} /> Importar CSV DeGiro
+            </button>
           </div>
         </div>
       ) : (
@@ -158,31 +195,30 @@ export default function CarteraPage() {
           {/* KPIs */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
             {[
-              { label: "Posiciones abiertas", value: open.length, unit: "", icon: BarChart2 },
-              { label: "Capital invertido", value: fmt(totalInvested), unit: "€", icon: TrendingUp },
-              { label: "P&L realizado", value: `${totalRealized >= 0 ? "+" : ""}${fmt(totalRealized)}`, unit: "€", icon: totalRealized >= 0 ? TrendingUp : TrendingDown, color: totalRealized >= 0 ? "var(--green)" : "var(--red)" },
-              { label: "Win rate (cerradas)", value: fmt(winRate, 1), unit: "%", icon: TrendingUp, color: winRate >= 50 ? "var(--green)" : "var(--red)" },
-            ].map((kpi) => (
+              { label: "Capital invertido", value: `${fmt(totalInvested)} €`, sub: `${open.length} posiciones abiertas` },
+              { label: "Primas IB capturadas", value: `${fmtSign(totalIBPremiums)} $`, sub: `≈ ${fmt(totalEffectiveSaving)} € de ahorro en coste`, color: "var(--green)" },
+              { label: "P&L realizado (acciones)", value: `${fmtSign(totalRealized)} €`, sub: `${closed.length} posiciones cerradas`, color: totalRealized >= 0 ? "var(--green)" : "var(--red)" },
+              { label: "Tickers con opciones IB", value: String(new Set(importedTrades.map(t => t.ticker)).size), sub: `${importedTrades.length} trades en total` },
+            ].map(kpi => (
               <div key={kpi.label} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
                 <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>{kpi.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: kpi.color ?? "var(--text-primary)" }}>
-                  {kpi.value}<span style={{ fontSize: 14, fontWeight: 400, marginLeft: 2 }}>{kpi.unit}</span>
-                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: kpi.color ?? "var(--text-primary)" }}>{kpi.value}</div>
+                {kpi.sub && <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 4 }}>{kpi.sub}</div>}
               </div>
             ))}
           </div>
 
-          {/* Filter tabs */}
+          {/* Filter */}
           <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10, alignSelf: "flex-start" }}>
-            {(["todas", "abiertas", "cerradas"] as const).map(f => (
-              <button key={f} type="button" onClick={() => setFilter(f)} style={{
+            {([["abiertas", open.length], ["cerradas", closed.length], ["todas", visible.length]] as const).map(([f, count]) => (
+              <button key={f} type="button" onClick={() => setFilter(f as typeof filter)} style={{
                 padding: "7px 16px", borderRadius: 7, border: "none", cursor: "pointer",
                 fontFamily: "var(--font-sans)", fontSize: 13, fontWeight: filter === f ? 600 : 500,
                 background: filter === f ? "var(--amber)" : "transparent",
                 color: filter === f ? "#0b1120" : "var(--text-secondary)",
                 textTransform: "capitalize",
               }}>
-                {f} {f === "abiertas" ? `(${open.length})` : f === "cerradas" ? `(${closed.length})` : `(${visible.length})`}
+                {f} ({count})
               </button>
             ))}
           </div>
@@ -193,28 +229,70 @@ export default function CarteraPage() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-primary)" }}>
-                    {["#", "Activo", "Acciones", "Coste medio", "Invertido", "P&L realizado", "Bolsa"].map(h => (
-                      <th key={h} style={{ padding: "12px 16px", textAlign: h === "#" ? "left" : h === "Activo" ? "left" : "right", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
+                    {["Ticker", "Acciones", "Coste medio €", "Invertido €", "Primas IB $", "Coste efectivo €/acc", "P&L realizado €"].map(h => (
+                      <th key={h} style={{ padding: "11px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>
                         {h}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.sort((a, b) => b.totalInvested - a.totalInvested).map((pos, i) => (
-                    <PositionRow key={pos.isin || pos.producto} pos={pos} rank={i + 1} />
-                  ))}
+                  {visible.map(row => {
+                    const saving = row.avgCost - row.effectiveCostPerShare
+                    const hasSaving = Math.abs(saving) > 0.01
+                    return (
+                      <tr key={row.ticker + row.isin} style={{ borderBottom: "1px solid var(--border)" }}>
+                        <td style={{ padding: "12px 16px" }}>
+                          <div style={{ fontWeight: 700, fontSize: 15 }}>{row.ticker}</div>
+                          {row.isin && <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 1 }}>{row.isin}</div>}
+                          {row.ibTradeCount > 0 && (
+                            <div style={{ fontSize: 10, color: "var(--amber)", marginTop: 2 }}>{row.ibTradeCount} opciones IB</div>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 14 }}>
+                          {row.shares > 0 ? fmt(row.shares, row.shares % 1 === 0 ? 0 : 2) : <span style={{ color: "var(--text-secondary)" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 14 }}>
+                          {row.avgCost > 0 ? `${fmt(row.avgCost)} €` : "—"}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 14 }}>
+                          {row.totalInvested > 0 ? `${fmt(row.totalInvested)} €` : "—"}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 14, color: row.ibPremiumsUSD > 0 ? "var(--green)" : "var(--text-secondary)" }}>
+                          {row.ibPremiumsUSD !== 0 ? `${fmtSign(row.ibPremiumsUSD)} $` : "—"}
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          {row.effectiveCostPerShare > 0 ? (
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 14, color: hasSaving ? "var(--green)" : "var(--text-primary)" }}>
+                                {fmt(row.effectiveCostPerShare)} €
+                              </div>
+                              {hasSaving && (
+                                <div style={{ fontSize: 11, color: "var(--green)", marginTop: 2 }}>
+                                  -{fmt(saving)} € vs coste medio
+                                </div>
+                              )}
+                            </div>
+                          ) : "—"}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: 14, fontWeight: 600, color: row.degiroRealizedPnl > 0 ? "var(--green)" : row.degiroRealizedPnl < 0 ? "var(--red)" : "var(--text-secondary)" }}>
+                          {row.degiroRealizedPnl !== 0 ? `${fmtSign(row.degiroRealizedPnl)} €` : "—"}
+                        </td>
+                      </tr>
+                    )
+                  })}
                   {visible.length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)", fontSize: 14 }}>
-                        No hay posiciones en esta categoría
-                      </td>
-                    </tr>
+                    <tr><td colSpan={7} style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)", fontSize: 14 }}>No hay posiciones</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
+          {ibMeta && (
+            <p style={{ fontSize: 11, color: "var(--text-secondary)", margin: 0 }}>
+              * Coste efectivo = (capital invertido - primas IB capturadas convertidas a EUR aprox. ÷ 1.08) / acciones. Las primas en $ se muestran sin conversión exacta.
+            </p>
+          )}
         </>
       )}
     </div>

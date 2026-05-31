@@ -1,150 +1,269 @@
 "use client"
 
 import { useState } from "react"
-import { NotebookPen, Pencil } from "lucide-react"
-import { trades, OptionTrade } from "@/lib/data"
-import {
-  tradePnl,
-  tradeOutcome,
-  fmtDollar,
-  parseDate,
-  MONTH_NAMES_ES,
-  TradeOutcome,
-} from "@/lib/utils"
+import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
+import { usePortfolio } from "@/lib/imported-portfolio"
+import { useImportedTrades } from "@/lib/imported-trades"
 import { useTradeNotes } from "@/lib/notes"
+import type { OptionTrade } from "@/lib/data"
+import { trades as demoTrades } from "@/lib/data"
 
-const OUTCOME_META: Record<TradeOutcome, { label: string; bg: string; fg: string }> = {
-  W: { label: "Ganada", bg: "var(--green-dim)", fg: "var(--green)" },
-  BE: { label: "Break-even", bg: "var(--amber-dim)", fg: "var(--amber)" },
-  L: { label: "Perdida", bg: "var(--red-dim)", fg: "var(--red)" },
+function fmt(n: number, dec = 2) {
+  return n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec })
 }
 
-export default function BitacoraPage() {
-  const feed = [...trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 16)
+function netPremium(t: OptionTrade): number {
+  if (t.status === "closed" && t.closePrice !== undefined) {
+    return (t.premium - t.closePrice) * t.qty * 100
+  }
+  return t.premium * t.qty * 100
+}
+
+interface TickerGroup {
+  ticker: string
+  // DeGiro
+  shares: number
+  avgCostEur: number
+  totalInvestedEur: number
+  // IB options
+  trades: OptionTrade[]
+  totalPremiumsUSD: number
+  // Computed
+  effectiveCostPerShare: number
+  totalSavingEur: number
+}
+
+function buildGroups(
+  positions: ReturnType<typeof usePortfolio>["positions"],
+  ibTrades: OptionTrade[]
+): TickerGroup[] {
+  const groups = new Map<string, TickerGroup>()
+
+  // Seed from DeGiro positions
+  for (const pos of positions) {
+    const ticker = pos.ticker.toUpperCase().split(" ")[0]
+    groups.set(ticker, {
+      ticker,
+      shares: pos.shares,
+      avgCostEur: pos.avgCost,
+      totalInvestedEur: pos.totalInvested,
+      trades: [],
+      totalPremiumsUSD: 0,
+      effectiveCostPerShare: pos.avgCost,
+      totalSavingEur: 0,
+    })
+  }
+
+  // Add IB trades
+  for (const t of ibTrades) {
+    const ticker = t.ticker.toUpperCase()
+    if (!groups.has(ticker)) {
+      groups.set(ticker, { ticker, shares: 0, avgCostEur: 0, totalInvestedEur: 0, trades: [], totalPremiumsUSD: 0, effectiveCostPerShare: 0, totalSavingEur: 0 })
+    }
+    const g = groups.get(ticker)!
+    g.trades.push(t)
+    g.totalPremiumsUSD += netPremium(t)
+  }
+
+  // Compute effective cost
+  groups.forEach((g) => {
+    const premiumsEur = g.totalPremiumsUSD / 1.08
+    if (g.shares > 0 && g.totalInvestedEur > 0) {
+      g.effectiveCostPerShare = (g.totalInvestedEur - premiumsEur) / g.shares
+      g.totalSavingEur = premiumsEur
+    }
+    g.trades.sort((a, b) => b.date.localeCompare(a.date))
+  })
+
+  const result: TickerGroup[] = []
+  groups.forEach(g => result.push(g))
+  return result
+    .filter(g => g.shares > 0 || g.trades.length > 0)
+    .sort((a, b) => b.totalInvestedEur - a.totalInvestedEur)
+}
+
+function NoteEditor({ id }: { id: string }) {
+  const { get, set } = useTradeNotes()
+  const note = get(id)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(note)
+
+  function save() { set(id, draft); setEditing(false) }
+
+  if (editing) return (
+    <div style={{ marginTop: 10 }}>
+      <textarea
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        autoFocus
+        rows={3}
+        placeholder="Notas sobre esta posición…"
+        style={{ width: "100%", resize: "vertical", background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--text-primary)", fontFamily: "var(--font-sans)", fontSize: 13, padding: "9px 11px", boxSizing: "border-box" }}
+      />
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button type="button" onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", background: "var(--amber)", color: "#0b1120", fontWeight: 600, fontSize: 12, fontFamily: "var(--font-sans)" }}>Guardar</button>
+        <button type="button" onClick={() => setEditing(false)} style={{ padding: "6px 14px", borderRadius: 7, cursor: "pointer", background: "transparent", border: "1px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600, fontSize: 12, fontFamily: "var(--font-sans)" }}>Cancelar</button>
+      </div>
+    </div>
+  )
+
+  if (note) return (
+    <div onClick={() => { setDraft(note); setEditing(true) }} style={{ marginTop: 10, padding: "10px 12px", background: "var(--bg-primary)", border: "1px solid var(--border)", borderRadius: 8, cursor: "pointer", display: "flex", gap: 8 }}>
+      <NotebookPen size={14} style={{ color: "var(--amber)", flexShrink: 0, marginTop: 2 }} />
+      <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{note}</p>
+    </div>
+  )
 
   return (
-    <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 22, maxWidth: 760 }}>
-      <header>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)" }}>
-          <span className="lab-live-dot" /> En vivo
-        </span>
-        <h1 style={{ fontSize: 30, margin: "6px 0 4px" }}>Cuaderno de Bitácora</h1>
-        <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>
-          Registro cronológico de cada operación. Añade tus notas: se guardan en este navegador.
-        </p>
-      </header>
+    <button type="button" onClick={() => { setDraft(""); setEditing(true) }} style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 7, cursor: "pointer", background: "transparent", border: "1px dashed var(--border)", color: "var(--text-secondary)", fontSize: 12, fontWeight: 500, fontFamily: "var(--font-sans)" }}>
+      <Pencil size={12} /> Añadir nota
+    </button>
+  )
+}
 
-      <ol style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 12 }}>
-        {feed.map((t) => (
-          <BitacoraEntry key={t.id} trade={t} />
-        ))}
-      </ol>
+function TickerCard({ g }: { g: TickerGroup }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasSaving = g.totalSavingEur > 0.01
+  const saving = g.avgCostEur - g.effectiveCostPerShare
+  const savingPct = g.avgCostEur > 0 ? (saving / g.avgCostEur) * 100 : 0
+
+  return (
+    <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
+      {/* Summary row */}
+      <div
+        onClick={() => g.trades.length > 0 && setExpanded(e => !e)}
+        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, padding: "18px 20px", cursor: g.trades.length > 0 ? "pointer" : "default" }}
+      >
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
+          {/* Ticker */}
+          <div style={{ minWidth: 80 }}>
+            <div style={{ fontWeight: 700, fontSize: 18, fontFamily: "var(--font-serif)" }}>{g.ticker}</div>
+            {g.shares > 0 && <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{fmt(g.shares, 0)} acciones</div>}
+          </div>
+
+          {/* Cost breakdown */}
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            {g.avgCostEur > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Coste medio</div>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{fmt(g.avgCostEur)} €</div>
+              </div>
+            )}
+            {g.totalPremiumsUSD !== 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Primas capturadas</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: "var(--green)" }}>+{fmt(g.totalPremiumsUSD)} $</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>≈ {fmt(g.totalSavingEur)} €</div>
+              </div>
+            )}
+            {hasSaving && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Coste efectivo</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: "var(--green)" }}>{fmt(g.effectiveCostPerShare)} €/acc</div>
+                <div style={{ fontSize: 11, color: "var(--green)" }}>-{fmt(saving)} € ({fmt(savingPct, 1)}% menos)</div>
+              </div>
+            )}
+            {g.totalInvestedEur > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Capital invertido</div>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{fmt(g.totalInvestedEur)} €</div>
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <NoteEditor id={`ticker-${g.ticker}`} />
+          </div>
+        </div>
+
+        {g.trades.length > 0 && (
+          <div style={{ display: "flex", alignItems: "flex-start", color: "var(--text-secondary)", paddingTop: 4 }}>
+            {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </div>
+        )}
+      </div>
+
+      {/* Trades detail */}
+      {expanded && g.trades.length > 0 && (
+        <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-primary)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                {["Fecha", "Tipo", "Qty", "Prima", "Cierre", "Prima neta", "Estado"].map(h => (
+                  <th key={h} style={{ padding: "9px 16px", textAlign: "left", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {g.trades.map(t => {
+                const net = netPremium(t)
+                return (
+                  <tr key={t.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>{t.date}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>
+                      <span style={{ padding: "2px 8px", borderRadius: 6, background: t.type === "Put" ? "rgba(251,191,36,0.12)" : "rgba(52,211,153,0.12)", color: t.type === "Put" ? "var(--amber)" : "var(--green)", fontSize: 12, fontWeight: 600 }}>
+                        SELL {t.type}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>{t.qty}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>${fmt(t.premium)}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>
+                      {t.status === "closed" && t.closePrice !== undefined ? `$${fmt(t.closePrice)}` : "—"}
+                    </td>
+                    <td style={{ padding: "10px 16px", fontWeight: 600, fontSize: 13, color: net >= 0 ? "var(--green)" : "var(--red)" }}>
+                      {net >= 0 ? "+" : ""}{fmt(net)} $
+                    </td>
+                    <td style={{ padding: "10px 16px" }}>
+                      <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: t.status === "open" ? "rgba(251,191,36,0.12)" : "var(--bg-hover)", color: t.status === "open" ? "var(--amber)" : "var(--text-secondary)" }}>
+                        {t.status === "open" ? "Abierta" : "Cerrada"}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
 
-function BitacoraEntry({ trade: t }: { trade: OptionTrade }) {
-  const { get, set } = useTradeNotes()
-  const note = get(t.id)
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(note)
+export default function BitacoraPage() {
+  const { positions } = usePortfolio()
+  const { importedTrades, meta: ibMeta } = useImportedTrades()
 
-  const pnl = tradePnl(t)
-  const outcome = tradeOutcome(t)
-  const meta = OUTCOME_META[outcome]
-  const d = parseDate(t.date)
-  const positive = pnl >= 0
+  const isDemo = !ibMeta && positions.length === 0
 
-  function startEdit() {
-    setDraft(get(t.id))
-    setEditing(true)
-  }
-  function save() {
-    set(t.id, draft)
-    setEditing(false)
-  }
+  // Use real data or demo trades as fallback
+  const trades = ibMeta ? importedTrades : demoTrades
+  const groups = buildGroups(positions, trades)
 
   return (
-    <li style={{ display: "flex", gap: 14, padding: 16, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12 }}>
-      <div style={{ textAlign: "center", flexShrink: 0, width: 46 }}>
-        <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 700, lineHeight: 1 }}>{d.getDate()}</div>
-        <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginTop: 2 }}>
-          {MONTH_NAMES_ES[d.getMonth()].slice(0, 3)}
-        </div>
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-          <strong style={{ fontFamily: "var(--font-sans)", fontSize: 15 }}>{t.ticker}</strong>
-          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            Venta {t.type} · {t.qty} {t.qty === 1 ? "contrato" : "contratos"} · prima {fmtDollar(t.premium)}
-          </span>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: meta.bg, color: meta.fg }}>
-            {meta.label}
-          </span>
-          {t.status === "open" && (
-            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "var(--accent-dim)", color: "var(--amber)" }}>
-              Abierta
-            </span>
-          )}
-        </div>
-        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>
-          Vencimiento {t.expiration}. {t.status === "closed" ? "Posición cerrada." : "Posición en seguimiento."}
+    <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <header>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)" }}>
+          Coste efectivo por posición
+        </span>
+        <h1 style={{ fontSize: 30, margin: "6px 0 4px" }}>Bitácora</h1>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>
+          Precio medio de compra reducido por las primas capturadas vendiendo calls y puts sobre cada acción.
+          {isDemo && <span style={{ marginLeft: 8, color: "var(--amber)" }}>· Datos demo — importa tus cuentas en Cartera</span>}
         </p>
+      </header>
 
-        {/* Nota */}
-        {editing ? (
-          <div style={{ marginTop: 10 }}>
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              autoFocus
-              rows={3}
-              placeholder="¿Por qué entraste? ¿Qué aprendiste?"
-              style={{
-                width: "100%",
-                resize: "vertical",
-                background: "var(--bg-primary)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                color: "var(--text-primary)",
-                fontFamily: "var(--font-sans)",
-                fontSize: 13,
-                padding: "9px 11px",
-              }}
-            />
-            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-              <button type="button" onClick={save} style={{ padding: "6px 14px", borderRadius: 7, border: "none", cursor: "pointer", background: "var(--amber)", color: "#0b1120", fontWeight: 600, fontSize: 12, fontFamily: "var(--font-sans)" }}>
-                Guardar
-              </button>
-              <button type="button" onClick={() => setEditing(false)} style={{ padding: "6px 14px", borderRadius: 7, cursor: "pointer", background: "transparent", border: "1px solid var(--border)", color: "var(--text-secondary)", fontWeight: 600, fontSize: 12, fontFamily: "var(--font-sans)" }}>
-                Cancelar
-              </button>
-            </div>
-          </div>
-        ) : note ? (
-          <div
-            onClick={startEdit}
-            style={{ marginTop: 10, padding: "10px 12px", background: "var(--bg-primary)", border: "1px solid var(--border-subtle)", borderRadius: 8, cursor: "pointer", display: "flex", gap: 8 }}
-          >
-            <NotebookPen size={14} strokeWidth={1.75} style={{ color: "var(--amber)", flexShrink: 0, marginTop: 2 }} />
-            <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{note}</p>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={startEdit}
-            style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 10px", borderRadius: 7, cursor: "pointer", background: "transparent", border: "1px dashed var(--border)", color: "var(--text-muted)", fontSize: 12, fontWeight: 500, fontFamily: "var(--font-sans)" }}
-          >
-            <Pencil size={12} strokeWidth={1.75} /> Añadir nota
-          </button>
-        )}
-      </div>
-
-      <div className="num" style={{ flexShrink: 0, textAlign: "right", fontWeight: 700, fontSize: 15, color: positive ? "var(--green)" : "var(--red)" }}>
-        {positive ? "+" : ""}
-        {fmtDollar(pnl)}
-      </div>
-    </li>
+      {groups.length === 0 ? (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)", fontSize: 14 }}>
+          Importa tus datos desde la Cartera para ver el cálculo de coste efectivo.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {groups.map(g => <TickerCard key={g.ticker} g={g} />)}
+        </div>
+      )}
+    </div>
   )
 }
