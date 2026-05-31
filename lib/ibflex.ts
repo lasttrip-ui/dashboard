@@ -92,8 +92,10 @@ export function parseUploadedXml(xml: string): IBFlexResult {
   })
 
   if (optTrades.length === 0) {
-    const cats = [...new Set(allTradeEls.map(el => attr(el, "assetCategory", "AssetClass") || "?"))].join(", ")
-    warnings.push(`Se encontraron ${allTradeEls.length} trades pero ninguno con assetCategory=OPT. Categorías encontradas: ${cats}`)
+    const catsSet = new Set(allTradeEls.map(el => attr(el, "assetCategory", "AssetClass") || "?"))
+    const cats: string[] = []; catsSet.forEach(c => cats.push(c))
+    const catsStr = cats.join(", ")
+    warnings.push(`Se encontraron ${allTradeEls.length} trades pero ninguno con assetCategory=OPT. Categorías encontradas: ${catsStr}`)
     return { trades: [], accountId, fetchedAt: new Date().toISOString(), warnings }
   }
 
