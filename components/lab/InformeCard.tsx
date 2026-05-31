@@ -1,17 +1,16 @@
 "use client"
 
+import Link from "next/link"
 import { ArrowRight, FileText } from "lucide-react"
 import { Informe, formatDateEs } from "@/lib/content"
 
 export default function InformeCard({ informe }: { informe: Informe }) {
-  const href = `https://lwsoptionslab.com/informes/${informe.slug}`
+  const href = `/informes/${informe.slug}`
   const color = informe.tickerColor ?? "var(--amber)"
 
   return (
-    <a
+    <Link
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
       className="lol-informe-card"
       style={{
         display: "flex",
@@ -61,6 +60,6 @@ export default function InformeCard({ informe }: { informe: Informe }) {
         )}
       </div>
       <ArrowRight size={16} strokeWidth={1.75} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
-    </a>
+    </Link>
   )
 }

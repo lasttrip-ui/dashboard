@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import {
   Bookmark,
   FileText,
@@ -28,14 +29,12 @@ export default function ContentCard({ item }: { item: ContentItem }) {
   const { isSaved, toggle } = useFavorites()
   const saved = isSaved(item.id)
   const Icon = TIPO_ICON[item.tipo]
-  const href = `https://lwsoptionslab.com/contenido/${item.slug}/`
+  const href = `/contenido/${item.slug}`
 
   return (
     <article style={{ position: "relative" }}>
-      <a
+      <Link
         href={href}
-        target="_blank"
-        rel="noopener noreferrer"
         className="lol-content-card"
         style={{
           display: "flex",
@@ -88,7 +87,7 @@ export default function ContentCard({ item }: { item: ContentItem }) {
             {item.excerpt}
           </p>
         </div>
-      </a>
+      </Link>
       <button
         type="button"
         onClick={() => toggle(item.id)}

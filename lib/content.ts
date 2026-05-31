@@ -405,6 +405,20 @@ export const USER = {
   tier: "premium" as AccessLevel,
 }
 
+export function getContentBySlug(slug: string): ContentItem | undefined {
+  return content.find((c) => c.slug === slug)
+}
+
+export function getInformeBySlug(slug: string): Informe | undefined {
+  return informes.find((i) => i.slug === slug)
+}
+
+export const ACCESS_LABEL: Record<AccessLevel, string> = {
+  free: "Gratis",
+  freemium: "Freemium",
+  premium: "Premium",
+}
+
 export function formatDateEs(iso: string): string {
   const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
   const d = new Date(iso + "T00:00:00")
