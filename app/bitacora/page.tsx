@@ -16,7 +16,8 @@ function netPremium(t: OptionTrade): number {
   if (t.status === "closed" && t.closePrice !== undefined) {
     return (t.premium - t.closePrice) * t.qty * 100
   }
-  return t.premium * t.qty * 100
+  // Open trade: use currentPrice as mark-to-market (negative if trade is losing)
+  return (t.premium - t.currentPrice) * t.qty * 100
 }
 
 interface TickerGroup {
@@ -151,8 +152,8 @@ function TickerCard({ g }: { g: TickerGroup }) {
             )}
             {g.totalPremiumsUSD !== 0 && (
               <div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Primas capturadas</div>
-                <div style={{ fontWeight: 600, fontSize: 15, color: "var(--green)" }}>+{fmt(g.totalPremiumsUSD)} $</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>P&L opciones neto</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: g.totalPremiumsUSD >= 0 ? "var(--green)" : "var(--red)" }}>{g.totalPremiumsUSD >= 0 ? "+" : ""}{fmt(g.totalPremiumsUSD)} $</div>
                 <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>≈ {fmt(g.totalSavingEur)} €</div>
               </div>
             )}

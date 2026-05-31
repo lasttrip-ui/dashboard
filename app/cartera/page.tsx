@@ -13,7 +13,7 @@ function netPremium(t: OptionTrade): number {
   if (t.status === "closed" && t.closePrice !== undefined) {
     return (t.premium - t.closePrice) * t.qty * 100
   }
-  return t.premium * t.qty * 100
+  return (t.premium - t.currentPrice) * t.qty * 100
 }
 
 function fmt(n: number, dec = 2) {
