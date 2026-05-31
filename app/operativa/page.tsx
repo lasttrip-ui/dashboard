@@ -1,13 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { trades } from "@/lib/data"
+import { trades as demoTrades } from "@/lib/data"
 import { calcStats, filterByPeriod, PeriodKey } from "@/lib/utils"
 import { useLocalStorage } from "@/lib/store"
+import { useImportedTrades } from "@/lib/imported-trades"
 import KpiCards from "@/components/KpiCards"
 import Calendar from "@/components/Calendar"
 import TickersSidebar from "@/components/TickersSidebar"
 import TradesTable from "@/components/TradesTable"
+import IBFlexImport from "@/components/lab/IBFlexImport"
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   mes: "ESTE MES",
@@ -25,6 +27,10 @@ export default function OperativaPage() {
   const [period, setPeriod] = useLocalStorage<PeriodKey>("lol-period", "anio")
   const [viewYear, setViewYear] = useState(2026)
   const [viewMonth, setViewMonth] = useState(4)
+  const { importedTrades, meta, saveResult, clear } = useImportedTrades()
+
+  const trades = meta && importedTrades.length > 0 ? importedTrades : demoTrades
+  const isLive = !!(meta && importedTrades.length > 0)
 
   const periodTrades = filterByPeriod(trades, period)
   const stats = calcStats(periodTrades)
@@ -41,35 +47,45 @@ export default function OperativaPage() {
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--amber)" }}>
             Cuaderno de operaciones
           </span>
-          <h1 style={{ fontSize: 30, margin: "6px 0 0" }}>Tu operativa</h1>
+          <h1 style={{ fontSize: 30, margin: "6px 0 0" }}>
+            Tu operativa
+            {!isLive && (
+              <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 500, padding: "2px 8px", borderRadius: 6, background: "var(--bg-hover)", color: "var(--text-secondary)", verticalAlign: "middle" }}>
+                Demo
+              </span>
+            )}
+          </h1>
           <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "4px 0 0" }}>
             Estrategia de venta de opciones (cobro de prima · theta decay).
           </p>
         </div>
-        <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10 }}>
-          {PERIODS.map((p) => {
-            const active = period === p.key
-            return (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => setPeriod(p.key)}
-                style={{
-                  padding: "7px 16px",
-                  borderRadius: 7,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "var(--font-sans)",
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 500,
-                  background: active ? "var(--amber)" : "transparent",
-                  color: active ? "#0b1120" : "var(--text-secondary)",
-                }}
-              >
-                {p.label}
-              </button>
-            )
-          })}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+          <IBFlexImport meta={meta} onImport={saveResult} onClear={clear} />
+          <div style={{ display: "flex", gap: 4, padding: 4, background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 10 }}>
+            {PERIODS.map((p) => {
+              const active = period === p.key
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => setPeriod(p.key)}
+                  style={{
+                    padding: "7px 16px",
+                    borderRadius: 7,
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "var(--font-sans)",
+                    fontSize: 13,
+                    fontWeight: active ? 600 : 500,
+                    background: active ? "var(--amber)" : "transparent",
+                    color: active ? "#0b1120" : "var(--text-secondary)",
+                  }}
+                >
+                  {p.label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </header>
 
