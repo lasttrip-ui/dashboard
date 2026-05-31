@@ -16,6 +16,7 @@ import {
   Moon,
   User,
   ChevronDown,
+  Briefcase,
   type LucideIcon,
 } from "lucide-react"
 import { useLocalStorage } from "@/lib/store"
@@ -32,6 +33,7 @@ const NAV: NavItem[] = [
   { href: "/contenido", label: "Contenido", icon: BookOpen },
   { href: "/informes", label: "Informes", icon: FileText },
   { href: "/operativa", label: "Operativa", icon: CandlestickChart },
+  { href: "/cartera", label: "Cartera", icon: Briefcase },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen },
   { href: "/favoritos", label: "Favoritos", icon: Bookmark },
 ]
