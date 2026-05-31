@@ -17,6 +17,7 @@ import {
   User,
   ChevronDown,
   Briefcase,
+  CalendarDays,
   type LucideIcon,
 } from "lucide-react"
 import { useLocalStorage } from "@/lib/store"
@@ -29,6 +30,8 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
+  { href: "/panel", label: "Panel", icon: LayoutGrid },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/cartera", label: "Cartera", icon: Briefcase },
   { href: "/operativa", label: "Operativa", icon: CandlestickChart },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen },

@@ -5,6 +5,6 @@ import { useRouter } from "next/navigation"
 
 export default function Home() {
   const router = useRouter()
-  useEffect(() => { router.replace("/cartera") }, [router])
+  useEffect(() => { router.replace("/panel") }, [router])
   return null
 }
