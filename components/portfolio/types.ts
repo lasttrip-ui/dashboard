@@ -11,6 +11,7 @@ export interface AccountSummary {
   leverage: string
   dividends: number
   unrealizedPnl: number
+  buyingPower?: number
 }
 
 export interface Balance {
