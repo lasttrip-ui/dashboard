@@ -1,7 +1,6 @@
 import { OptionTrade } from "./data"
 
-// Today's fixed date for demo purposes
-export const TODAY = "2026-05-24"
+export const TODAY = "2026-06-06"
 
 // ── Number formatting ──────────────────────────────────────────────────────
 
