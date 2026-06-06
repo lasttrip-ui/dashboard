@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { trades, cumulativePnlData } from "@/lib/data"
+import { trades, cumulativePnlData, navHistoryData } from "@/lib/data"
 import { calcStats, filterByPeriod, filterByMonth, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
 import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
@@ -76,7 +76,7 @@ function PnlAccumulatedCard({ totalPnl, periodLabel }: { totalPnl: number; perio
           P&L Acumulado
         </div>
         <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
-          01/01/2026 → {today}
+          {period === "todo" ? "2021" : period === "anio" ? "01/01/2026" : "Este mes"} → {today}
         </div>
       </div>
       <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1, marginBottom: "0.5rem" }}>
@@ -92,13 +92,92 @@ function PnlAccumulatedCard({ totalPnl, periodLabel }: { totalPnl: number; perio
               </linearGradient>
             </defs>
             <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--text-muted)" }} tickLine={false} axisLine={false}
-              tickFormatter={v => v.replace("2026-", "")} />
+              tickFormatter={v => v.replace(/^\d{4}-/, "")} />
             <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
               contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
               formatter={(v: number) => [`$${v.toFixed(2)}`, "P&L"]}
             />
             <Area type="monotone" dataKey="pnl" stroke={color} strokeWidth={2} fill="url(#grad_pos)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+// ── NAV History Chart ─────────────────────────────────────────────────────────
+
+function NavHistoryCard() {
+  const first = navHistoryData[0].nav
+  const last  = navHistoryData[navHistoryData.length - 1].nav
+  const gain  = last - first
+  const pct   = ((last / first - 1) * 100).toFixed(1)
+  const color = "#22c55e"
+
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
+        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Historial NAV Real · 2021 → Hoy
+        </div>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
+            Datos reales IBKR
+          </div>
+          <div style={{ fontSize: "0.75rem", color, fontWeight: 700 }} className="num">
+            +{pct}%
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "2rem", marginBottom: "0.5rem", alignItems: "baseline" }}>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>NAV Actual</div>
+          <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1 }}>
+            €{last.toLocaleString("en-US")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ganancia total</div>
+          <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color }}>
+            +€{gain.toLocaleString("en-US")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Inicio</div>
+          <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+            €{first}
+          </div>
+        </div>
+      </div>
+      <div style={{ flex: 1, minHeight: 140 }}>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={navHistoryData} margin={{ top: 4, right: 8, bottom: 0, left: -4 }}>
+            <defs>
+              <linearGradient id="grad_nav" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={v => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`}
+              width={42}
+            />
+            <Tooltip
+              contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
+              formatter={(v: number) => [`€${v.toLocaleString("en-US")}`, "NAV"]}
+            />
+            <Area type="monotone" dataKey="nav" stroke={color} strokeWidth={2.5} fill="url(#grad_nav)" dot={{ fill: color, r: 3 }} activeDot={{ r: 5 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -292,10 +371,17 @@ export default function PanelPage() {
         <PnlAccumulatedCard totalPnl={stats.totalPnl} periodLabel={PERIOD_LABELS[period]} />
       </div>
 
-      {/* Row 2: Monthly Heatmap */}
-      <MonthlyHeatmap year={2026} />
+      {/* Row 2: Full NAV History */}
+      <NavHistoryCard />
 
-      {/* Row 3: Calendar + Tickers sidebar */}
+      {/* Row 3: Monthly Heatmap (multi-year) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <MonthlyHeatmap year={2024} />
+        <MonthlyHeatmap year={2025} />
+        <MonthlyHeatmap year={2026} />
+      </div>
+
+      {/* Row 4: Calendar + Tickers sidebar */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "0.875rem", alignItems: "start" }}>
         <Calendar
           trades={trades}

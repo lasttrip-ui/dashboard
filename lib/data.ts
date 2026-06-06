@@ -17,6 +17,34 @@ export interface OptionTrade {
 }
 
 export const trades: OptionTrade[] = [
+  // ── 2024 – Operaciones reales IBKR ────────────────────────────────────────
+  // Primeras opciones: covered calls sobre posiciones en cartera
+  { id: "h24_01", date: "2024-05-02", ticker: "EVA",  type: "Call", action: "SELL", qty: 1, premium: 0.10, expiration: "2024-07-19", dteTotalAtOpen: 78,  currentPrice: 0, closePrice: 0.05, status: "closed" },
+  { id: "h24_02", date: "2024-06-05", ticker: "EVA",  type: "Call", action: "SELL", qty: 2, premium: 0.20, expiration: "2024-12-20", dteTotalAtOpen: 198, currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_03", date: "2024-06-10", ticker: "EVA",  type: "Call", action: "SELL", qty: 1, premium: 0.20, expiration: "2025-01-17", dteTotalAtOpen: 221, currentPrice: 0, closePrice: 0.11, status: "closed" },
+  { id: "h24_04", date: "2024-07-05", ticker: "WBX",  type: "Call", action: "SELL", qty: 1, premium: 0.05, expiration: "2024-12-20", dteTotalAtOpen: 168, currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_05", date: "2024-07-11", ticker: "TUYA", type: "Call", action: "SELL", qty: 1, premium: 0.17, expiration: "2024-12-20", dteTotalAtOpen: 162, currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_06", date: "2024-10-02", ticker: "OPEN", type: "Put",  action: "SELL", qty: 1, premium: 0.39, expiration: "2027-01-15", dteTotalAtOpen: 836, currentPrice: 0.32, status: "open" },
+  { id: "h24_07", date: "2024-10-25", ticker: "TUYA", type: "Call", action: "SELL", qty: 1, premium: 0.20, expiration: "2025-03-21", dteTotalAtOpen: 147, currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_08", date: "2024-10-29", ticker: "ACHR", type: "Put",  action: "SELL", qty: 1, premium: 0.22, expiration: "2024-12-20", dteTotalAtOpen: 52,  currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_09", date: "2024-11-04", ticker: "GSAT", type: "Put",  action: "SELL", qty: 1, premium: 0.15, expiration: "2024-12-20", dteTotalAtOpen: 46,  currentPrice: 0, closePrice: 0,    status: "closed" },
+  // ZETA – gran pérdida por put corta (el mercado cayó rápido)
+  { id: "h24_10", date: "2024-11-06", ticker: "ZETA", type: "Put",  action: "SELL", qty: 1, premium: 1.13, expiration: "2024-11-15", dteTotalAtOpen: 9,   currentPrice: 0, closePrice: 7.42, status: "closed" },
+  // Roll-down tras la pérdida
+  { id: "h24_11", date: "2024-11-14", ticker: "ZETA", type: "Put",  action: "SELL", qty: 1, premium: 1.37, expiration: "2024-12-20", dteTotalAtOpen: 36,  currentPrice: 0, closePrice: 1.35, status: "closed" },
+  { id: "h24_12", date: "2024-11-14", ticker: "ZETA", type: "Put",  action: "SELL", qty: 1, premium: 7.95, expiration: "2024-12-20", dteTotalAtOpen: 36,  currentPrice: 0, closePrice: 7.95, status: "closed" },
+  { id: "h24_13", date: "2024-11-20", ticker: "ZETA", type: "Put",  action: "SELL", qty: 1, premium: 1.26, expiration: "2024-12-20", dteTotalAtOpen: 30,  currentPrice: 0, closePrice: 1.26, status: "closed" },
+  { id: "h24_14", date: "2024-12-02", ticker: "ACHR", type: "Put",  action: "SELL", qty: 1, premium: 0.52, expiration: "2024-12-13", dteTotalAtOpen: 11,  currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_15", date: "2024-12-05", ticker: "ACHR", type: "Put",  action: "SELL", qty: 1, premium: 0.27, expiration: "2024-12-13", dteTotalAtOpen: 8,   currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_16", date: "2024-12-18", ticker: "SOUN", type: "Put",  action: "SELL", qty: 1, premium: 0.13, expiration: "2024-12-20", dteTotalAtOpen: 2,   currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_17", date: "2024-12-20", ticker: "ZETA", type: "Call", action: "SELL", qty: 1, premium: 5.93, expiration: "2027-01-15", dteTotalAtOpen: 757, currentPrice: 3.20, status: "open" },
+  { id: "h24_18", date: "2024-12-23", ticker: "ZETA", type: "Call", action: "SELL", qty: 1, premium: 3.10, expiration: "2025-06-20", dteTotalAtOpen: 179, currentPrice: 0, closePrice: 0.30, status: "closed" },
+  { id: "h24_19", date: "2024-12-23", ticker: "ACHR", type: "Put",  action: "SELL", qty: 1, premium: 0.32, expiration: "2025-01-17", dteTotalAtOpen: 25,  currentPrice: 0, closePrice: 0.15, status: "closed" },
+  { id: "h24_20", date: "2024-12-23", ticker: "PFE",  type: "Call", action: "SELL", qty: 1, premium: 0.41, expiration: "2025-01-17", dteTotalAtOpen: 25,  currentPrice: 0, closePrice: 0.31, status: "closed" },
+  { id: "h24_21", date: "2024-12-23", ticker: "TUYA", type: "Call", action: "SELL", qty: 1, premium: 0.11, expiration: "2025-03-21", dteTotalAtOpen: 88,  currentPrice: 0, closePrice: 0,    status: "closed" },
+  { id: "h24_22", date: "2024-12-24", ticker: "VERI", type: "Put",  action: "SELL", qty: 1, premium: 0.99, expiration: "2025-08-15", dteTotalAtOpen: 234, currentPrice: 0, closePrice: 0.50, status: "closed" },
+  { id: "h24_23", date: "2024-12-24", ticker: "ACHR", type: "Put",  action: "SELL", qty: 1, premium: 2.59, expiration: "2027-01-15", dteTotalAtOpen: 752, currentPrice: 2.10, status: "open" },
+  { id: "h24_24", date: "2024-12-27", ticker: "WBX",  type: "Call", action: "SELL", qty: 1, premium: 0.10, expiration: "2025-06-20", dteTotalAtOpen: 175, currentPrice: 0, closePrice: 0,    status: "closed" },
   // January 2026
   { id: "t001", date: "2026-01-05", ticker: "SPY", type: "Put", action: "SELL", qty: 2, premium: 3.45, expiration: "2026-01-17", dteTotalAtOpen: 12, currentPrice: 0, closePrice: 0.15, status: "closed" },
   { id: "t002", date: "2026-01-05", ticker: "QQQ", type: "Call", action: "SELL", qty: 1, premium: 2.10, expiration: "2026-01-17", dteTotalAtOpen: 12, currentPrice: 0, closePrice: 0.08, status: "closed" },
@@ -215,4 +243,28 @@ export const cumulativePnlData = [
   { date: "2026-04-30", pnl: 10237 },
   { date: "2026-05-31", pnl: 11019 },
   { date: "2026-06-06", pnl: 11192 },
+]
+
+// Real monthly Portfolio NAV (EUR) — datos reales de extractos IBKR 2021-2026
+export const navHistoryData = [
+  { date: "2021-12", nav: 100    },
+  { date: "2022-12", nav: 70     },
+  { date: "2023-12", nav: 731    },
+  { date: "2024-03", nav: 2920   },
+  { date: "2024-06", nav: 5100   },
+  { date: "2024-09", nav: 7900   },
+  { date: "2024-12", nav: 10860  },
+  { date: "2025-01", nav: 11463  },
+  { date: "2025-02", nav: 12732  },
+  { date: "2025-03", nav: 16155  },
+  { date: "2025-04", nav: 17028  },
+  { date: "2025-05", nav: 17729  },
+  { date: "2025-06", nav: 18653  },
+  { date: "2025-07", nav: 21699  },
+  { date: "2025-08", nav: 25190  },
+  { date: "2025-09", nav: 25705  },
+  { date: "2025-10", nav: 26805  },
+  { date: "2025-11", nav: 28408  },
+  { date: "2025-12", nav: 30679  },
+  { date: "2026-06", nav: 37403  },
 ]
