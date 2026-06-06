@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { trades } from "@/lib/data"
+import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, MONTH_NAMES_ES } from "@/lib/utils"
 import TradesTable from "@/components/TradesTable"
 import { TODAY } from "@/lib/utils"
@@ -22,6 +22,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 }
 
 export default function OperacionesPage() {
+  const trades = useAllTrades()
   const [ty, tm] = TODAY.split("-").map(Number)
   const [viewYear, setViewYear] = useState(ty)
   const [viewMonth, setViewMonth] = useState(tm)

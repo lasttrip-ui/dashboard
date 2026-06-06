@@ -1,8 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { trades } from "@/lib/data"
+import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, tradePnl, getWeeksInMonth, dateToString, getDayData, MONTH_NAMES_ES, TODAY } from "@/lib/utils"
+import type { OptionTrade } from "@/lib/data"
 
 const DAY_HEADERS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]
 
@@ -15,7 +16,7 @@ function fmtK(n: number): string {
 
 type CalView = "mes" | "anio"
 
-function YearView({ year }: { year: number }) {
+function YearView({ year, trades }: { year: number; trades: OptionTrade[] }) {
   const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
@@ -47,7 +48,7 @@ function YearView({ year }: { year: number }) {
   )
 }
 
-function MonthView({ year, month }: { year: number; month: number }) {
+function MonthView({ year, month, trades }: { year: number; month: number; trades: OptionTrade[] }) {
   const dayData = getDayData(trades, year, month)
   const weeks = getWeeksInMonth(year, month)
   const monthTrades = filterByMonth(trades, year, month)
@@ -165,6 +166,7 @@ function MonthView({ year, month }: { year: number; month: number }) {
 }
 
 export default function CalendarioPage() {
+  const trades = useAllTrades()
   const [ty, tm] = TODAY.split("-").map(Number)
   const [view, setView] = useState<CalView>("mes")
   const [viewYear, setViewYear] = useState(ty)
@@ -217,8 +219,8 @@ export default function CalendarioPage() {
           <button onClick={() => { setViewYear(ty); setViewMonth(tm) }} style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-secondary)", cursor: "pointer", padding: "0.25rem 0.75rem", fontSize: "0.8125rem" }}>Hoy</button>
         </div>
 
-        {view === "mes" && <MonthView year={viewYear} month={viewMonth} />}
-        {view === "anio" && <YearView year={viewYear} />}
+        {view === "mes" && <MonthView year={viewYear} month={viewMonth} trades={trades} />}
+        {view === "anio" && <YearView year={viewYear} trades={trades} />}
       </div>
     </div>
   )

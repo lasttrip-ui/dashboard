@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { trades, cumulativePnlData, navHistoryData } from "@/lib/data"
+import { cumulativePnlData, navHistoryData } from "@/lib/data"
+import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByPeriod, filterByMonth, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
 import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
@@ -187,7 +188,7 @@ function NavHistoryCard() {
 
 // ── Monthly Heatmap ───────────────────────────────────────────────────────────
 
-function MonthlyHeatmap({ year = 2026 }: { year?: number }) {
+function MonthlyHeatmap({ year = 2026, trades }: { year?: number; trades: import("@/lib/data").OptionTrade[] }) {
   const monthlyPnl = useMemo(() => {
     const result: Record<number, number> = {}
     for (let m = 1; m <= 12; m++) {
@@ -197,7 +198,7 @@ function MonthlyHeatmap({ year = 2026 }: { year?: number }) {
       }
     }
     return result
-  }, [year])
+  }, [year, trades])
 
   const total = Object.values(monthlyPnl).reduce((s, v) => s + v, 0)
 
@@ -284,6 +285,7 @@ function PeriodBtn({ label, active, onClick }: { label: string; active: boolean;
 // ── Main Panel Page ───────────────────────────────────────────────────────────
 
 export default function PanelPage() {
+  const trades = useAllTrades()
   const [period, setPeriod] = useState<PeriodKey>("anio")
   const [viewYear, setViewYear] = useState(2026)
   const [viewMonth, setViewMonth] = useState(6)
@@ -376,9 +378,9 @@ export default function PanelPage() {
 
       {/* Row 3: Monthly Heatmap (multi-year) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <MonthlyHeatmap year={2024} />
-        <MonthlyHeatmap year={2025} />
-        <MonthlyHeatmap year={2026} />
+        <MonthlyHeatmap year={2024} trades={trades} />
+        <MonthlyHeatmap year={2025} trades={trades} />
+        <MonthlyHeatmap year={2026} trades={trades} />
       </div>
 
       {/* Row 4: Calendar + Tickers sidebar */}
