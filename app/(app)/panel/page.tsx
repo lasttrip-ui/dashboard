@@ -62,7 +62,7 @@ function AccountSummary({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 
 // ── P&L Accumulated Chart ─────────────────────────────────────────────────────
 
-function PnlAccumulatedCard({ totalPnl, periodLabel }: { totalPnl: number; periodLabel: string }) {
+function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: number; periodLabel: string; period: PeriodKey }) {
   const color = totalPnl >= 0 ? "#22c55e" : "#ef4444"
   const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
 
@@ -368,7 +368,7 @@ export default function PanelPage() {
         </div>
 
         {/* P&L Acumulado */}
-        <PnlAccumulatedCard totalPnl={stats.totalPnl} periodLabel={PERIOD_LABELS[period]} />
+        <PnlAccumulatedCard totalPnl={stats.totalPnl} periodLabel={PERIOD_LABELS[period]} period={period} />
       </div>
 
       {/* Row 2: Full NAV History */}
