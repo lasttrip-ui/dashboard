@@ -1,0 +1,398 @@
+"use client"
+
+import { useState, useEffect, useMemo } from "react"
+import { cumulativePnlData, navHistoryData } from "@/lib/data"
+import { useAllTrades } from "@/hooks/use-all-trades"
+import { calcStats, filterByPeriod, filterByMonth, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
+import WinRateGauge from "@/components/WinRateGauge"
+import ProfitFactorChart from "@/components/ProfitFactorChart"
+import Calendar from "@/components/Calendar"
+import TickersSidebar from "@/components/TickersSidebar"
+import type { IBKRSnapshot } from "@/components/portfolio/types"
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtK(n: number): string {
+  const abs = Math.abs(n)
+  const sign = n >= 0 ? "+" : "-"
+  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}K`
+  return `${sign}$${abs.toFixed(0)}`
+}
+
+function fmtEur(n: number): string {
+  return `€${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+}
+
+function pnlColor(n: number) {
+  return n > 0 ? "var(--green)" : n < 0 ? "var(--red)" : "var(--text-muted)"
+}
+
+const MONTHS_SHORT = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"]
+
+// ── Account Summary ───────────────────────────────────────────────────────────
+
+function AccountSummary({ snapshot }: { snapshot: IBKRSnapshot | null }) {
+  const s = snapshot?.summary
+  const cells = [
+    { label: "NLV", value: s ? fmtEur(s.netLiquidation) : "—" },
+    { label: "Colchón", value: s ? fmtEur(s.excessLiquidity) : "—" },
+    { label: "Poder de compra", value: s ? fmtEur(s.buyingPower ?? 0) : "—" },
+    { label: "Liq. Excedente", value: s ? fmtEur(s.availableFunds) : "—" },
+  ]
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+      <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        Resumen de Cuenta
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", flex: 1 }}>
+        {cells.map(c => (
+          <div key={c.label} style={{ background: "var(--bg-hover)", borderRadius: 8, padding: "0.5rem 0.625rem", border: "1px solid var(--border-subtle)" }}>
+            <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>
+              {c.label}
+            </div>
+            <div className="num" style={{ fontSize: "0.9375rem", fontWeight: 700, color: "var(--text-primary)" }}>
+              {c.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── P&L Accumulated Chart ─────────────────────────────────────────────────────
+
+function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: number; periodLabel: string; period: PeriodKey }) {
+  const color = totalPnl >= 0 ? "#22c55e" : "#ef4444"
+  const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
+
+  // Build a cumulative chart from the cumulative data
+  const chartData = cumulativePnlData
+
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
+        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          P&L Acumulado
+        </div>
+        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
+          {period === "todo" ? "2021" : period === "anio" ? "01/01/2026" : "Este mes"} → {today}
+        </div>
+      </div>
+      <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1, marginBottom: "0.5rem" }}>
+        {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2).replace(".", ",")}
+      </div>
+      <div style={{ flex: 1, minHeight: 100 }}>
+        <ResponsiveContainer width="100%" height={110}>
+          <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <defs>
+              <linearGradient id="grad_pos" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--text-muted)" }} tickLine={false} axisLine={false}
+              tickFormatter={v => v.replace(/^\d{4}-/, "")} />
+            <YAxis hide domain={["auto", "auto"]} />
+            <Tooltip
+              contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
+              formatter={(v: number) => [`$${v.toFixed(2)}`, "P&L"]}
+            />
+            <Area type="monotone" dataKey="pnl" stroke={color} strokeWidth={2} fill="url(#grad_pos)" dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+// ── NAV History Chart ─────────────────────────────────────────────────────────
+
+function NavHistoryCard() {
+  const first = navHistoryData[0].nav
+  const last  = navHistoryData[navHistoryData.length - 1].nav
+  const gain  = last - first
+  const pct   = ((last / first - 1) * 100).toFixed(1)
+  const color = "#22c55e"
+
+  return (
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
+        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Historial NAV Real · 2021 → Hoy
+        </div>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
+            Datos reales IBKR
+          </div>
+          <div style={{ fontSize: "0.75rem", color, fontWeight: 700 }} className="num">
+            +{pct}%
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: "2rem", marginBottom: "0.5rem", alignItems: "baseline" }}>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>NAV Actual</div>
+          <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1 }}>
+            €{last.toLocaleString("en-US")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ganancia total</div>
+          <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color }}>
+            +€{gain.toLocaleString("en-US")}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Inicio</div>
+          <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-secondary)" }}>
+            €{first}
+          </div>
+        </div>
+      </div>
+      <div style={{ flex: 1, minHeight: 140 }}>
+        <ResponsiveContainer width="100%" height={160}>
+          <AreaChart data={navHistoryData} margin={{ top: 4, right: 8, bottom: 0, left: -4 }}>
+            <defs>
+              <linearGradient id="grad_nav" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 9, fill: "var(--text-muted)" }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={v => v >= 1000 ? `€${(v / 1000).toFixed(0)}k` : `€${v}`}
+              width={42}
+            />
+            <Tooltip
+              contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
+              formatter={(v: number) => [`€${v.toLocaleString("en-US")}`, "NAV"]}
+            />
+            <Area type="monotone" dataKey="nav" stroke={color} strokeWidth={2.5} fill="url(#grad_nav)" dot={{ fill: color, r: 3 }} activeDot={{ r: 5 }} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+// ── Monthly Heatmap ───────────────────────────────────────────────────────────
+
+function MonthlyHeatmap({ year = 2026, trades }: { year?: number; trades: import("@/lib/data").OptionTrade[] }) {
+  const monthlyPnl = useMemo(() => {
+    const result: Record<number, number> = {}
+    for (let m = 1; m <= 12; m++) {
+      const monthTrades = filterByMonth(trades, year, m)
+      if (monthTrades.length > 0) {
+        result[m] = calcStats(monthTrades).totalPnl
+      }
+    }
+    return result
+  }, [year, trades])
+
+  const total = Object.values(monthlyPnl).reduce((s, v) => s + v, 0)
+
+  return (
+    <div className="card" style={{ padding: "0.875rem 1rem" }}>
+      <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.625rem" }}>
+        P&L Mensual
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%", fontSize: "0.8125rem" }}>
+          <thead>
+            <tr>
+              <th style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.6875rem", padding: "0.25rem 0.5rem", textAlign: "left" }}>AÑO</th>
+              {MONTHS_SHORT.map(m => (
+                <th key={m} style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.6875rem", padding: "0.25rem 0.375rem", textAlign: "center" }}>{m}</th>
+              ))}
+              <th style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.6875rem", padding: "0.25rem 0.5rem", textAlign: "center" }}>TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ padding: "0.25rem 0.5rem", fontWeight: 700, color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{year}</td>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                const v = monthlyPnl[m]
+                return (
+                  <td key={m} style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
+                    {v !== undefined ? (
+                      <div style={{
+                        background: v > 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
+                        color: v > 0 ? "var(--green)" : "var(--red)",
+                        borderRadius: 6,
+                        padding: "0.25rem 0.375rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        whiteSpace: "nowrap",
+                      }} className="num">
+                        {fmtK(v)}
+                      </div>
+                    ) : (
+                      <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", padding: "0.25rem" }}>—</div>
+                    )}
+                  </td>
+                )
+              })}
+              <td style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
+                <div style={{
+                  background: total > 0 ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)",
+                  color: total > 0 ? "var(--green)" : "var(--red)",
+                  borderRadius: 6,
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 700,
+                  whiteSpace: "nowrap",
+                  border: `1px solid ${total > 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                }} className="num">
+                  {fmtK(total)}
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ── Period Button ─────────────────────────────────────────────────────────────
+
+function PeriodBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: "0.3rem 0.75rem",
+      borderRadius: 6,
+      border: "none",
+      cursor: "pointer",
+      background: active ? "var(--accent)" : "var(--bg-hover)",
+      color: active ? "#fff" : "var(--text-secondary)",
+      fontSize: "0.75rem",
+      fontWeight: active ? 600 : 400,
+    }}>{label}</button>
+  )
+}
+
+// ── Main Panel Page ───────────────────────────────────────────────────────────
+
+export default function PanelPage() {
+  const trades = useAllTrades()
+  const [period, setPeriod] = useState<PeriodKey>("anio")
+  const [viewYear, setViewYear] = useState(2026)
+  const [viewMonth, setViewMonth] = useState(6)
+  const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
+
+  useEffect(() => {
+    const [ty, tm] = TODAY.split("-").map(Number)
+    setViewYear(ty)
+    setViewMonth(tm)
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/ibkr", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setSnapshot(d))
+      .catch(() => null)
+  }, [])
+
+  const periodTrades = filterByPeriod(trades, period)
+  const stats = calcStats(periodTrades)
+
+  const PERIOD_LABELS: Record<PeriodKey, string> = {
+    mes: "Este mes",
+    anio: "Este año",
+    todo: "Total",
+  }
+
+  return (
+    <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {/* Page header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: "1.125rem", fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-primary)" }}>
+            Panel de Trading
+          </h1>
+          <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+            Main account · IBKR Flex Query
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
+          <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginRight: "0.25rem" }}>PERÍODO</span>
+          <PeriodBtn label="Mes" active={period === "mes"} onClick={() => setPeriod("mes")} />
+          <PeriodBtn label="Este año" active={period === "anio"} onClick={() => setPeriod("anio")} />
+          <PeriodBtn label="Total" active={period === "todo"} onClick={() => setPeriod("todo")} />
+        </div>
+      </div>
+
+      {/* Row 1: 4-col KPI grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 0.85fr 1.1fr 1.4fr", gap: "0.875rem", alignItems: "stretch" }}>
+        <AccountSummary snapshot={snapshot} />
+
+        {/* Factor de Beneficio */}
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Factor de Beneficio
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <ProfitFactorChart
+              profitFactor={stats.profitFactor}
+              totalGains={stats.totalGains}
+              totalLosses={stats.totalLosses}
+            />
+          </div>
+        </div>
+
+        {/* Tasa de Acierto */}
+        <div className="card" style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Tasa de Acierto
+          </div>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <WinRateGauge
+              winRate={stats.winRate}
+              wins={stats.wins}
+              breakevens={stats.breakevens}
+              losses={stats.losses}
+            />
+          </div>
+          <div style={{ textAlign: "center", fontSize: "0.6875rem", color: "var(--text-muted)" }}>
+            {stats.tradeCount} operaciones
+          </div>
+        </div>
+
+        {/* P&L Acumulado */}
+        <PnlAccumulatedCard totalPnl={stats.totalPnl} periodLabel={PERIOD_LABELS[period]} period={period} />
+      </div>
+
+      {/* Row 2: Full NAV History */}
+      <NavHistoryCard />
+
+      {/* Row 3: Monthly Heatmap (multi-year) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        <MonthlyHeatmap year={2024} trades={trades} />
+        <MonthlyHeatmap year={2025} trades={trades} />
+        <MonthlyHeatmap year={2026} trades={trades} />
+      </div>
+
+      {/* Row 4: Calendar + Tickers sidebar */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "0.875rem", alignItems: "start" }}>
+        <Calendar
+          trades={trades}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
+        />
+        <TickersSidebar trades={trades} viewYear={viewYear} viewMonth={viewMonth} />
+      </div>
+    </div>
+  )
+}
