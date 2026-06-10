@@ -278,6 +278,52 @@ export function parseIBKRExecutions(csv: string): ImportedExecution[] {
   return out.sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
 }
 
+// ── IBKR Dividend CSV parser ─────────────────────────────────────────────────
+// Section "Dividendos"/"Dividends" in activity statement
+// Columns: [0]section [1]type [2]currency [3]date [4]description [5]amount
+
+export interface ImportedDividend {
+  date: string       // YYYY-MM-DD
+  company: string    // ticker extracted from description
+  amount: number     // positive only (skip withholding tax lines)
+  currency: string
+  description: string
+}
+
+export function parseIBKRDividends(csv: string): ImportedDividend[] {
+  const out: ImportedDividend[] = []
+  const lines = csv.split(/\r?\n/)
+
+  for (const line of lines) {
+    const c = parseLine(line)
+    const section = (c[0] || "").toLowerCase()
+    if (section !== "dividendos" && section !== "dividends") continue
+
+    const rowType = (c[1] || "").toLowerCase()
+    if (rowType !== "data" && rowType !== "datos") continue
+
+    const currency = (c[2] || "USD").replace(/"/g, "").trim()
+    const dateRaw = (c[3] || "").replace(/"/g, "").trim()
+    const description = (c[4] || "").replace(/"/g, "").trim()
+    const amountRaw = (c[5] || "").replace(/"/g, "").trim()
+
+    const date = toISO(dateRaw)
+    if (!date) continue
+
+    const amount = parseFloat(amountRaw.replace(",", "."))
+    if (isNaN(amount) || amount <= 0) continue  // skip withholding tax (negative amounts)
+
+    // Extract ticker: "VICI PROPERTIES INC(US...) Cash Dividend..." → "VICI"
+    const beforeParen = description.split("(")[0].trim()
+    const company = beforeParen.split(/\s+/)[0].toUpperCase()
+    if (!company) continue
+
+    out.push({ date, company, amount, currency, description })
+  }
+
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
 // ── Auto-detect broker ────────────────────────────────────────────────────────
 
 export function detectBroker(csv: string): Broker {

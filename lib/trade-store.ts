@@ -49,3 +49,34 @@ export function saveImportedExecs(execs: ImportedExecution[]): void {
 export function clearImportedExecs(): void {
   localStorage.removeItem(EXEC_KEY)
 }
+
+// ── Imported dividends ────────────────────────────────────────────────────────
+
+import type { ImportedDividend } from "./import-parser"
+
+const DIV_KEY = "tt-imported-divs"
+
+export function loadImportedDividends(): ImportedDividend[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(DIV_KEY)
+    return raw ? (JSON.parse(raw) as ImportedDividend[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveImportedDividends(divs: ImportedDividend[]): void {
+  localStorage.setItem(DIV_KEY, JSON.stringify(divs))
+}
+
+export function clearImportedDividends(): void {
+  localStorage.removeItem(DIV_KEY)
+}
+
+export function mergeImportedDividends(base: ImportedDividend[], incoming: ImportedDividend[]): ImportedDividend[] {
+  // Deduplicate by date+company+amount combination
+  const keys = new Set(base.map(d => `${d.date}_${d.company}_${d.amount}`))
+  const unique = incoming.filter(d => !keys.has(`${d.date}_${d.company}_${d.amount}`))
+  return [...base, ...unique].sort((a, b) => a.date.localeCompare(b.date))
+}

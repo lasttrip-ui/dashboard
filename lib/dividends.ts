@@ -1,5 +1,5 @@
-// Estimated dividend data based on IBKR positions
-// Monthly breakdown per company (USD)
+// Dividend data per year — 2026 is hardcoded from IBKR positions.
+// Historical years are populated from localStorage via the import page.
 
 export interface DividendEntry {
   month: number  // 1-12
@@ -76,7 +76,7 @@ export const DIVIDEND_DATA_2026: DividendEntry[] = [
   { month: 6, company: "PFE",   amount: 11.75 },
 ]
 
-// All company names seen
+// All company names seen in 2026
 export const DIVIDEND_COMPANIES = [
   "VICI", "BGS", "LYB", "PK", "ARCC", "PFE", "KVUE",
   "AES", "VOC", "MAIN", "DGE", "PFLT", "VALE", "SEVN",
@@ -95,27 +95,55 @@ export const COMPANY_COLOR: Record<string, string> = Object.fromEntries(
   DIVIDEND_COMPANIES.map((c, i) => [c, PALETTE[i % PALETTE.length]])
 )
 
-// Monthly aggregated by company (for stacked bar)
-export function getMonthlyDividends() {
+function colorForCompany(company: string): string {
+  if (COMPANY_COLOR[company]) return COMPANY_COLOR[company]
+  // Deterministic color for unknown companies
+  let h = 0
+  for (let i = 0; i < company.length; i++) h = (h * 31 + company.charCodeAt(i)) % PALETTE.length
+  return PALETTE[h]
+}
+
+export { colorForCompany }
+
+// ── Year-agnostic helpers ──────────────────────────────────────────────────────
+
+export function buildMonthlyDividends(data: DividendEntry[]) {
   const months = Array.from({ length: 12 }, (_, i) => i + 1)
   return months.map(m => {
     const entry: Record<string, number> = { month: m }
-    const monthData = DIVIDEND_DATA_2026.filter(d => d.month === m)
-    for (const d of monthData) {
+    for (const d of data.filter(x => x.month === m)) {
       entry[d.company] = (entry[d.company] ?? 0) + d.amount
     }
     return entry
   })
 }
 
-export function getDividendTotals() {
+export function buildDividendTotals(data: DividendEntry[]) {
   const totals: Record<string, number> = {}
-  for (const d of DIVIDEND_DATA_2026) {
+  for (const d of data) {
     totals[d.company] = (totals[d.company] ?? 0) + d.amount
   }
   return Object.entries(totals)
     .sort((a, b) => b[1] - a[1])
     .map(([company, amount]) => ({ company, amount }))
+}
+
+export function buildActiveCompanies(data: DividendEntry[]): string[] {
+  const seen: string[] = []
+  for (const d of data) {
+    if (!seen.includes(d.company)) seen.push(d.company)
+  }
+  return seen
+}
+
+// ── 2026 convenience exports (kept for backwards compat) ─────────────────────
+
+export function getMonthlyDividends() {
+  return buildMonthlyDividends(DIVIDEND_DATA_2026)
+}
+
+export function getDividendTotals() {
+  return buildDividendTotals(DIVIDEND_DATA_2026)
 }
 
 export const TOTAL_DIVIDENDS_2026 = DIVIDEND_DATA_2026.reduce((s, d) => s + d.amount, 0)

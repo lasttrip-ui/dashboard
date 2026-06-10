@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useMemo } from "react"
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from "recharts"
 import {
-  DIVIDEND_DATA_2026, DIVIDEND_COMPANIES, COMPANY_COLOR,
-  getMonthlyDividends, getDividendTotals, TOTAL_DIVIDENDS_2026,
+  DIVIDEND_DATA_2026,
+  TOTAL_DIVIDENDS_2026,
+  buildMonthlyDividends,
+  buildDividendTotals,
+  buildActiveCompanies,
+  colorForCompany,
 } from "@/lib/dividends"
+import { loadImportedDividends } from "@/lib/trade-store"
+import type { ImportedDividend } from "@/lib/import-parser"
+import type { DividendEntry } from "@/lib/dividends"
 import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
 import { useLiveQuotes } from "@/hooks/use-live-quotes"
 
@@ -96,118 +103,191 @@ function PositionesTab({ positions }: { positions: Position[] }) {
 
 // ── Dividends sub-tab ────────────────────────────────────────────────────────
 
-function DividendosTab() {
-  const monthlyData = useMemo(() => getMonthlyDividends(), [])
-  const totals = useMemo(() => getDividendTotals(), [])
-  const totalYear = TOTAL_DIVIDENDS_2026
-  const monthsWithData = DIVIDEND_DATA_2026.map(d => d.month).filter((v, i, a) => a.indexOf(v) === i).length
-  const topPayer = totals[0]?.company ?? "—"
+const CURRENT_YEAR = 2026
+const YEAR_RANGE = [2021, 2022, 2023, 2024, 2025, 2026]
 
-  // Active companies per month (those with at least 1 entry)
-  const activeCos = useMemo(() => {
-    const set = new Set(DIVIDEND_DATA_2026.map(d => d.company))
-    return DIVIDEND_COMPANIES.filter(c => set.has(c))
+function importedDivsToEntries(divs: ImportedDividend[], year: number): DividendEntry[] {
+  return divs
+    .filter(d => d.date.startsWith(String(year)))
+    .map(d => ({
+      month: parseInt(d.date.slice(5, 7), 10),
+      company: d.company,
+      amount: d.amount,
+    }))
+}
+
+function DividendosTab() {
+  const [year, setYear] = useState(CURRENT_YEAR)
+  const [importedDivs, setImportedDivs] = useState<ImportedDividend[]>([])
+
+  useEffect(() => {
+    setImportedDivs(loadImportedDividends())
+    const onStorage = () => setImportedDivs(loadImportedDividends())
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
   }, [])
+
+  const yearData = useMemo<DividendEntry[]>(() => {
+    if (year === CURRENT_YEAR) return DIVIDEND_DATA_2026
+    return importedDivsToEntries(importedDivs, year)
+  }, [year, importedDivs])
+
+  const monthlyData = useMemo(() => buildMonthlyDividends(yearData), [yearData])
+  const totals = useMemo(() => buildDividendTotals(yearData), [yearData])
+  const activeCos = useMemo(() => buildActiveCompanies(yearData), [yearData])
+  const totalYear = yearData.reduce((s, d) => s + d.amount, 0)
+  const monthsWithData = new Set(yearData.map(d => d.month)).size
+  const topPayer = totals[0]?.company ?? "—"
+  const hasData = yearData.length > 0
+
+  // Years that have imported data
+  const yearsWithImported = useMemo(() => {
+    const set = new Set<number>()
+    for (const d of importedDivs) {
+      const y = parseInt(d.date.slice(0, 4), 10)
+      if (!isNaN(y)) set.add(y)
+    }
+    return set
+  }, [importedDivs])
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-      {/* KPI strip */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
-        {[
-          { label: "Ingresos Pasivos (Año)", value: `$${totalYear.toFixed(2)}`, sub: undefined },
-          { label: "Promedio Mensual", value: `$${(totalYear / monthsWithData).toFixed(2)}`, sub: `${monthsWithData} meses con dividendos` },
-          { label: "Promedio Diario", value: `$${(totalYear / 365).toFixed(2)}`, sub: undefined },
-          { label: "Empresas", value: `${activeCos.length}`, sub: `${topPayer} es tu mayor pagador` },
-        ].map(c => (
-          <div key={c.label} className="card" style={{ padding: "0.875rem 1rem" }}>
-            <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: "0.375rem" }}>
-              {c.label}
-            </div>
-            <div className="num" style={{ fontSize: "1.375rem", fontWeight: 800, color: "var(--text-primary)" }}>{c.value}</div>
-            {c.sub && <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginTop: 2 }}>{c.sub}</div>}
-          </div>
-        ))}
+      {/* Year navigator */}
+      <div className="card" style={{ padding: "0.75rem 1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setYear(y => Math.max(YEAR_RANGE[0], y - 1))}
+            disabled={year === YEAR_RANGE[0]}
+            style={{ background: "none", border: "none", cursor: year === YEAR_RANGE[0] ? "default" : "pointer", color: year === YEAR_RANGE[0] ? "var(--text-muted)" : "var(--text-primary)", fontSize: "1rem", padding: "0 0.25rem" }}
+          >◀</button>
+          {YEAR_RANGE.map(y => {
+            const active = y === year
+            const hasAny = y === CURRENT_YEAR || yearsWithImported.has(y)
+            return (
+              <button key={y} onClick={() => setYear(y)} style={{
+                padding: "0.3rem 0.75rem", borderRadius: 6, border: "none", cursor: "pointer",
+                background: active ? "var(--accent)" : "var(--bg-hover)",
+                color: active ? "#fff" : hasAny ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize: "0.8125rem", fontWeight: active ? 700 : 400,
+                opacity: hasAny ? 1 : 0.55,
+              }}>
+                {y}
+                {hasAny && !active && <span style={{ marginLeft: 3, color: "var(--green)", fontSize: "0.5rem" }}>●</span>}
+              </button>
+            )
+          })}
+          <button
+            onClick={() => setYear(y => Math.min(YEAR_RANGE[YEAR_RANGE.length - 1], y + 1))}
+            disabled={year === YEAR_RANGE[YEAR_RANGE.length - 1]}
+            style={{ background: "none", border: "none", cursor: year === YEAR_RANGE[YEAR_RANGE.length - 1] ? "default" : "pointer", color: year === YEAR_RANGE[YEAR_RANGE.length - 1] ? "var(--text-muted)" : "var(--text-primary)", fontSize: "1rem", padding: "0 0.25rem" }}
+          >▶</button>
+        </div>
       </div>
 
-      {/* Stacked bar chart */}
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.875rem" }}>
-          <div>
-            <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ingresos</div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ fontSize: "0.9375rem", fontWeight: 700 }}>◀</span>
-              <span style={{ fontSize: "0.9375rem", fontWeight: 700 }}>2026</span>
-              <span style={{ fontSize: "0.9375rem", fontWeight: 700 }}>▶</span>
-            </div>
+      {/* No data state */}
+      {!hasData && (
+        <div className="card" style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>📂</div>
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "var(--text-primary)", marginBottom: "0.375rem" }}>
+            Sin datos para {year}
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 6, padding: "0.25rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>Mensual</button>
-            <button style={{ background: "var(--bg-hover)", color: "var(--text-secondary)", border: "none", borderRadius: 6, padding: "0.25rem 0.75rem", fontSize: "0.75rem", cursor: "pointer" }}>Acumulado</button>
+          <div style={{ fontSize: "0.8125rem", lineHeight: 1.6 }}>
+            Importa tu extracto de actividad de IBKR del año {year} desde la sección{" "}
+            <a href="/importar" style={{ color: "var(--accent)", textDecoration: "underline" }}>Importar</a>{" "}
+            para ver tus dividendos históricos.
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={monthlyData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
-            <XAxis dataKey="month" tickFormatter={i => MONTHS_SHORT[i - 1]} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={48} />
-            <Tooltip
-              contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-              formatter={(v: number, name: string) => [`$${v.toFixed(2)}`, name]}
-              labelFormatter={m => MONTHS_SHORT[Number(m) - 1]}
-            />
-            {activeCos.map(co => (
-              <Bar key={co} dataKey={co} stackId="a" fill={COMPANY_COLOR[co]} radius={co === activeCos[activeCos.length - 1] ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-        {/* Legend */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", marginTop: "0.75rem" }}>
-          {activeCos.map(co => (
-            <div key={co} style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: COMPANY_COLOR[co] }} />
-              {co}
+      )}
+
+      {hasData && <>
+        {/* KPI strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
+          {[
+            { label: `Ingresos ${year}`, value: `$${totalYear.toFixed(2)}`, sub: undefined },
+            { label: "Promedio Mensual", value: `$${monthsWithData > 0 ? (totalYear / monthsWithData).toFixed(2) : "0.00"}`, sub: `${monthsWithData} meses con dividendos` },
+            { label: "Promedio Diario", value: `$${(totalYear / 365).toFixed(2)}`, sub: undefined },
+            { label: "Empresas", value: `${activeCos.length}`, sub: topPayer !== "—" ? `${topPayer} es tu mayor pagador` : undefined },
+          ].map(c => (
+            <div key={c.label} className="card" style={{ padding: "0.875rem 1rem" }}>
+              <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: "0.375rem" }}>
+                {c.label}
+              </div>
+              <div className="num" style={{ fontSize: "1.375rem", fontWeight: 800, color: "var(--text-primary)" }}>{c.value}</div>
+              {c.sub && <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginTop: 2 }}>{c.sub}</div>}
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Analysis by company */}
-      <div className="card">
-        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
-          Análisis por Empresa
+        {/* Stacked bar chart */}
+        <div className="card">
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
+            Ingresos mensuales {year}
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={monthlyData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
+              <XAxis dataKey="month" tickFormatter={i => MONTHS_SHORT[i - 1]} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={48} />
+              <Tooltip
+                contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
+                formatter={(v: number, name: string) => [`$${v.toFixed(2)}`, name]}
+                labelFormatter={m => MONTHS_SHORT[Number(m) - 1]}
+              />
+              {activeCos.map((co, idx) => (
+                <Bar key={co} dataKey={co} stackId="a" fill={colorForCompany(co)} radius={idx === activeCos.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+          {/* Legend */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", marginTop: "0.75rem" }}>
+            {activeCos.map(co => (
+              <div key={co} style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.6875rem", color: "var(--text-secondary)" }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: colorForCompany(co) }} />
+                {co}
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table className="tt-table">
-            <thead>
-              <tr>
-                <th>Empresa</th>
-                <th>Total 2026</th>
-                <th>% del Total</th>
-                <th style={{ minWidth: 160 }}>Distribución</th>
-              </tr>
-            </thead>
-            <tbody>
-              {totals.map(({ company, amount }) => {
-                const pct = (amount / totalYear) * 100
-                return (
-                  <tr key={company}>
-                    <td style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <div style={{ width: 8, height: 8, borderRadius: 2, background: COMPANY_COLOR[company] }} />
-                      {company}
-                    </td>
-                    <td className="num">${amount.toFixed(2)}</td>
-                    <td className="num" style={{ color: "var(--text-secondary)" }}>{pct.toFixed(1)}%</td>
-                    <td>
-                      <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: COMPANY_COLOR[company], borderRadius: 3 }} />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+
+        {/* Analysis by company */}
+        <div className="card">
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
+            Análisis por Empresa · {year}
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="tt-table">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Total {year}</th>
+                  <th>% del Total</th>
+                  <th style={{ minWidth: 160 }}>Distribución</th>
+                </tr>
+              </thead>
+              <tbody>
+                {totals.map(({ company, amount }) => {
+                  const pct = totalYear > 0 ? (amount / totalYear) * 100 : 0
+                  const color = colorForCompany(company)
+                  return (
+                    <tr key={company}>
+                      <td style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                        {company}
+                      </td>
+                      <td className="num">${amount.toFixed(2)}</td>
+                      <td className="num" style={{ color: "var(--text-secondary)" }}>{pct.toFixed(1)}%</td>
+                      <td>
+                        <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3 }} />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </>}
     </div>
   )
 }

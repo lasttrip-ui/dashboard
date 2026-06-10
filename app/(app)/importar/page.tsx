@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { parseCSV, detectBroker, parseIBKRExecutions, type Broker, type ImportedExecution } from "@/lib/import-parser"
-import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs } from "@/lib/trade-store"
+import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, type Broker, type ImportedExecution, type ImportedDividend } from "@/lib/import-parser"
+import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends } from "@/lib/trade-store"
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
 
@@ -49,8 +49,10 @@ export default function ImportPage() {
   const [broker, setBroker] = useState<Broker>("IBKR")
   const [parsed, setParsed] = useState<OptionTrade[] | null>(null)
   const [parsedExecs, setParsedExecs] = useState<ImportedExecution[]>([])
+  const [parsedDivs, setParsedDivs] = useState<ImportedDividend[]>([])
   const [saved, setSaved] = useState<OptionTrade[]>(() => loadImported())
   const [savedExecs, setSavedExecs] = useState<ImportedExecution[]>(() => loadImportedExecs())
+  const [savedDivs, setSavedDivs] = useState<ImportedDividend[]>(() => loadImportedDividends())
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -68,11 +70,13 @@ export default function ImportPage() {
       if (detectedBroker !== broker) setBroker(detectedBroker)
       const result = parseCSV(text, detectedBroker)
       const execs = detectedBroker === "IBKR" ? parseIBKRExecutions(text) : []
-      if (result.length === 0 && execs.length === 0) {
+      const divs = detectedBroker === "IBKR" ? parseIBKRDividends(text) : []
+      if (result.length === 0 && execs.length === 0 && divs.length === 0) {
         setError("No se encontraron movimientos en el archivo. Comprueba que es un extracto de actividad de IBKR (con la sección «Operaciones») o un export de transacciones de DeGiro.")
       } else {
         if (result.length > 0) setParsed(result)
         if (execs.length > 0) setParsedExecs(execs)
+        if (divs.length > 0) setParsedDivs(divs)
       }
     }
     reader.readAsText(file, "utf-8")
@@ -83,6 +87,7 @@ export default function ImportPage() {
     setDragging(false)
     const file = e.dataTransfer.files[0]
     if (file) processFile(file)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [broker])
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -108,16 +113,25 @@ export default function ImportPage() {
       saveImportedExecs(merged)
       setSavedExecs(merged)
     }
+    if (parsedDivs.length > 0) {
+      const current = loadImportedDividends()
+      const merged = mergeImportedDividends(current, parsedDivs)
+      saveImportedDividends(merged)
+      setSavedDivs(merged)
+    }
     setParsed(null)
     setParsedExecs([])
+    setParsedDivs([])
     setFileName(null)
   }
 
   function handleClear() {
     clearImported()
     clearImportedExecs()
+    clearImportedDividends()
     setSaved([])
     setSavedExecs([])
+    setSavedDivs([])
   }
 
   const info = INSTRUCTIONS[broker]
@@ -214,14 +228,15 @@ export default function ImportPage() {
       )}
 
       {/* Preview */}
-      {(parsed || parsedExecs.length > 0) && (
+      {(parsed || parsedExecs.length > 0 || parsedDivs.length > 0) && (
         <div className="card" style={{ padding: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <div>
               <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                 Vista previa
-                {parsed && ` — ${parsed.length} operaciones de opciones`}
-                {parsedExecs.length > 0 && ` — ${parsedExecs.length} movimientos (acciones + opciones)`}
+                {parsed && ` — ${parsed.length} opciones`}
+                {parsedExecs.length > 0 && ` — ${parsedExecs.length} movimientos`}
+                {parsedDivs.length > 0 && ` — ${parsedDivs.length} dividendos`}
               </div>
               {parsedExecs.length > 0 && (
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
@@ -277,6 +292,42 @@ export default function ImportPage() {
             </div>
           )}
 
+          {/* Dividends preview */}
+          {parsedDivs.length > 0 && (
+            <div style={{ overflowX: "auto", marginBottom: parsed ? "1rem" : 0 }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                Dividendos detectados
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <thead>
+                  <tr>
+                    {["Fecha", "Empresa", "CCY", "Importe", "Descripción"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "0.375rem 0.5rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.6875rem", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--border)" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedDivs.slice(0, 30).map((d, i) => (
+                    <tr key={`${d.date}_${d.company}_${i}`} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-hover)" }}>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-muted)", fontFamily: "monospace", fontSize: "0.75rem" }}>{d.date}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", fontWeight: 700, color: "var(--text-primary)" }}>{d.company}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>{d.currency}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--green)", fontWeight: 600 }} className="num">${d.amount.toFixed(2)}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)", fontSize: "0.6875rem", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {parsedDivs.length > 30 && (
+                <div style={{ textAlign: "center", padding: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Mostrando los primeros 30 de {parsedDivs.length} dividendos
+                </div>
+              )}
+            </div>
+          )}
+
           {parsed && <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
               <thead>
@@ -312,6 +363,25 @@ export default function ImportPage() {
               </tbody>
             </table>
           </div>}
+        </div>
+      )}
+
+      {/* Saved dividends summary */}
+      {savedDivs.length > 0 && (
+        <div className="card" style={{ padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <CheckCircle size={16} color="var(--green)" />
+              <div>
+                <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {savedDivs.length} dividendos importados
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  {savedDivs[0]?.date.slice(0, 4)} → {savedDivs[savedDivs.length - 1]?.date.slice(0, 4)} · Visibles en Cartera → Dividendos
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
