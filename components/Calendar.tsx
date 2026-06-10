@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { OptionTrade } from "@/lib/data"
+import type { Trade as IBKRTrade } from "@/components/portfolio/types"
 import {
   getDayData,
   getWeeksInMonth,
@@ -21,15 +22,32 @@ interface CalendarProps {
   viewYear: number
   viewMonth: number
   onMonthChange: (year: number, month: number) => void
+  executions?: IBKRTrade[]
 }
 
-export default function Calendar({ trades, viewYear, viewMonth, onMonthChange }: CalendarProps) {
+export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, executions = [] }: CalendarProps) {
   const [tooltip, setTooltip] = useState<{ date: string; pnl: number; count: number } | null>(null)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
 
   const monthTrades = filterByMonth(trades, viewYear, viewMonth)
   const dayData = getDayData(trades, viewYear, viewMonth)
   const monthStats = calcStats(monthTrades)
   const weeks = getWeeksInMonth(viewYear, viewMonth)
+
+  // Real IBKR executions grouped by date (YYYY-MM-DD)
+  const execsByDay = useMemo(() => {
+    const map = new Map<string, IBKRTrade[]>()
+    for (const e of executions) {
+      const d = e.tradeTime.slice(0, 10)
+      const list = map.get(d)
+      if (list) list.push(e)
+      else map.set(d, [e])
+    }
+    return map
+  }, [executions])
+
+  const selectedTrades = selectedDay ? trades.filter(t => t.date === selectedDay) : []
+  const selectedExecs = selectedDay ? (execsByDay.get(selectedDay) ?? []) : []
 
   function navigate(dir: -1 | 1) {
     let m = viewMonth + dir
@@ -110,11 +128,16 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange }:
                   textColor = "var(--text-primary)"
                 }
 
+                const dayExecs = execsByDay.get(ds)
+                const hasAny = !!dd || !!dayExecs
+                const isSelected = selectedDay === ds
+
                 return (
                   <div
                     key={di}
                     onMouseEnter={() => dd && setTooltip({ date: ds, pnl: dd.pnl, count: dd.tradeCount })}
                     onMouseLeave={() => setTooltip(null)}
+                    onClick={() => hasAny && setSelectedDay(isSelected ? null : ds)}
                     style={{
                       background: bg,
                       borderRadius: "6px",
@@ -125,10 +148,10 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange }:
                       alignItems: "center",
                       justifyContent: "flex-start",
                       gap: "2px",
-                      cursor: dd ? "pointer" : "default",
+                      cursor: hasAny ? "pointer" : "default",
                       position: "relative",
                       opacity: isCurrentMonth ? 1 : 0.3,
-                      border: isToday ? "1px solid var(--accent)" : "1px solid transparent",
+                      border: isSelected ? "1px solid var(--green)" : isToday ? "1px solid var(--accent)" : "1px solid transparent",
                       transition: "background 0.15s",
                     }}
                   >
@@ -154,6 +177,11 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange }:
                           {dd.tradeCount}t
                         </span>
                       </>
+                    )}
+                    {dayExecs && isCurrentMonth && (
+                      <span style={{ fontSize: "0.5625rem", color: "var(--accent)", lineHeight: 1, fontWeight: 600 }}>
+                        {dayExecs.length} IBKR
+                      </span>
                     )}
                   </div>
                 )
@@ -186,8 +214,110 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange }:
         })}
       </div>
 
+      {/* Day detail panel */}
+      {selectedDay && (
+        <div style={{
+          marginTop: "0.75rem",
+          padding: "0.875rem 1rem",
+          background: "var(--bg-primary)",
+          border: "1px solid var(--border)",
+          borderRadius: "10px",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.625rem" }}>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-primary)" }}>
+              Movimientos del {selectedDay.split("-").reverse().join("/")}
+            </span>
+            <button onClick={() => setSelectedDay(null)} style={{
+              background: "transparent", border: "none", color: "var(--text-muted)",
+              cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "0.125rem 0.375rem",
+            }}>✕</button>
+          </div>
+
+          {selectedTrades.length === 0 && selectedExecs.length === 0 && (
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Sin movimientos este día.</div>
+          )}
+
+          {selectedTrades.length > 0 && (
+            <div style={{ marginBottom: selectedExecs.length > 0 ? "0.875rem" : 0 }}>
+              <div style={{ fontSize: "0.625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>
+                Operaciones de opciones
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                <thead>
+                  <tr>
+                    {["Ticker", "Tipo", "Cant.", "Prima", "Cierre", "Estado", "P&L"].map(h => (
+                      <th key={h} style={{ textAlign: h === "P&L" ? "right" : "left", padding: "0.2rem 0.4rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.625rem", textTransform: "uppercase", borderBottom: "1px solid var(--border-subtle)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedTrades.map(t => {
+                    const pnl = tradePnl(t)
+                    return (
+                      <tr key={t.id}>
+                        <td style={{ padding: "0.25rem 0.4rem", fontWeight: 700, color: "var(--text-primary)" }}>{t.ticker}</td>
+                        <td style={{ padding: "0.25rem 0.4rem", color: t.type === "Put" ? "var(--red)" : "var(--green)", fontWeight: 600 }}>
+                          {t.type.toUpperCase()}
+                        </td>
+                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{t.qty}</td>
+                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${t.premium.toFixed(2)}</td>
+                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">
+                          {t.status === "closed" ? `$${(t.closePrice ?? 0).toFixed(2)}` : "—"}
+                        </td>
+                        <td style={{ padding: "0.25rem 0.4rem", color: t.status === "open" ? "var(--accent)" : "var(--text-muted)", fontSize: "0.6875rem" }}>
+                          {t.status === "open" ? "Abierta" : "Cerrada"}
+                        </td>
+                        <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: pnl > 0 ? "var(--green)" : pnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
+                          {pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {selectedExecs.length > 0 && (
+            <div>
+              <div style={{ fontSize: "0.625rem", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>
+                Ejecuciones reales IBKR
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+                <thead>
+                  <tr>
+                    {["Hora", "Símbolo", "Tipo", "Lado", "Cant.", "Precio", "P&L realizado"].map(h => (
+                      <th key={h} style={{ textAlign: h.startsWith("P&L") ? "right" : "left", padding: "0.2rem 0.4rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.625rem", textTransform: "uppercase", borderBottom: "1px solid var(--border-subtle)" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedExecs.map(e => (
+                    <tr key={e.tradeId}>
+                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-muted)", fontFamily: "monospace", fontSize: "0.6875rem" }}>
+                        {e.tradeTime.slice(11, 16)}
+                      </td>
+                      <td style={{ padding: "0.25rem 0.4rem", fontWeight: 700, color: "var(--text-primary)" }}>{e.symbol}</td>
+                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)", fontSize: "0.6875rem" }}>{e.secType}</td>
+                      <td style={{ padding: "0.25rem 0.4rem", fontWeight: 600, color: e.side === "SELL" ? "var(--red)" : "var(--green)" }}>
+                        {e.side}
+                      </td>
+                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{e.size}</td>
+                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${e.price.toFixed(2)}</td>
+                      <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: e.realizedPnl > 0 ? "var(--green)" : e.realizedPnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
+                        {e.realizedPnl !== 0 ? `${e.realizedPnl >= 0 ? "+" : ""}$${e.realizedPnl.toFixed(0)}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tooltip */}
-      {tooltip && (
+      {tooltip && !selectedDay && (
         <div style={{
           marginTop: "0.75rem",
           padding: "0.5rem 0.75rem",

@@ -399,6 +399,7 @@ export default function PanelPage() {
           viewYear={viewYear}
           viewMonth={viewMonth}
           onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
+          executions={snapshot?.recentTrades ?? []}
         />
         <TickersSidebar trades={trades} viewYear={viewYear} viewMonth={viewMonth} />
       </div>
