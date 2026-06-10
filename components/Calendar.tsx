@@ -46,6 +46,15 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
     return map
   }, [executions])
 
+  // Realized P&L per day from real executions
+  const execPnlByDay = useMemo(() => {
+    const map = new Map<string, number>()
+    execsByDay.forEach((list, d) => {
+      map.set(d, list.reduce((s, e) => s + e.realizedPnl, 0))
+    })
+    return map
+  }, [execsByDay])
+
   const selectedTrades = selectedDay ? trades.filter(t => t.date === selectedDay) : []
   const selectedExecs = selectedDay ? (execsByDay.get(selectedDay) ?? []) : []
 
@@ -102,10 +111,14 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
           // Compute week totals
           let weekPnl = 0
           let weekTrades = 0
+          let weekExecPnl = 0
+          let weekExecs = 0
           for (const d of week) {
             const ds = dateToString(d)
             const dd = dayData.get(ds)
             if (dd) { weekPnl += dd.pnl; weekTrades += dd.tradeCount }
+            const el = execsByDay.get(ds)
+            if (el) { weekExecPnl += execPnlByDay.get(ds) ?? 0; weekExecs += el.length }
           }
 
           return (
@@ -118,6 +131,11 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 const isProfitable = dd && dd.pnl > 0
                 const isLoss = dd && dd.pnl < 0
 
+                const dayExecs = execsByDay.get(ds)
+                const dayExecPnl = execPnlByDay.get(ds) ?? 0
+                const hasAny = !!dd || !!dayExecs
+                const isSelected = selectedDay === ds
+
                 let bg = "transparent"
                 let textColor = "var(--text-muted)"
                 if (isToday) {
@@ -126,11 +144,10 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 } else if (dd && isCurrentMonth) {
                   bg = isProfitable ? "rgba(34,197,94,0.12)" : isLoss ? "rgba(239,68,68,0.12)" : "var(--bg-hover)"
                   textColor = "var(--text-primary)"
+                } else if (dayExecs && isCurrentMonth) {
+                  bg = dayExecPnl > 0 ? "rgba(34,197,94,0.07)" : dayExecPnl < 0 ? "rgba(239,68,68,0.07)" : "var(--bg-hover)"
+                  textColor = "var(--text-primary)"
                 }
-
-                const dayExecs = execsByDay.get(ds)
-                const hasAny = !!dd || !!dayExecs
-                const isSelected = selectedDay === ds
 
                 return (
                   <div
@@ -179,9 +196,21 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                       </>
                     )}
                     {dayExecs && isCurrentMonth && (
-                      <span style={{ fontSize: "0.5625rem", color: "var(--accent)", lineHeight: 1, fontWeight: 600 }}>
-                        {dayExecs.length} IBKR
-                      </span>
+                      <>
+                        {dayExecPnl !== 0 && (
+                          <span style={{
+                            fontSize: "0.625rem",
+                            fontWeight: 700,
+                            color: dayExecPnl > 0 ? "var(--green)" : "var(--red)",
+                            lineHeight: 1,
+                          }} className="num">
+                            {fmtDollarShort(dayExecPnl)}
+                          </span>
+                        )}
+                        <span style={{ fontSize: "0.5625rem", color: "var(--accent)", lineHeight: 1, fontWeight: 600 }}>
+                          {dayExecs.length} IBKR
+                        </span>
+                      </>
                     )}
                   </div>
                 )
@@ -189,7 +218,9 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
 
               {/* Week summary column */}
               <div style={{
-                background: weekTrades > 0 ? (weekPnl >= 0 ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)") : "transparent",
+                background: (weekTrades > 0 || weekExecs > 0)
+                  ? ((weekPnl + weekExecPnl) >= 0 ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)")
+                  : "transparent",
                 borderRadius: "6px",
                 padding: "0.375rem 0.375rem",
                 minHeight: "56px",
@@ -206,6 +237,14 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                       {weekPnl >= 0 ? "+" : ""}{fmtDollarShort(weekPnl)}
                     </span>
                     <span style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>{weekTrades}t</span>
+                  </>
+                )}
+                {weekExecs > 0 && (
+                  <>
+                    <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: weekExecPnl >= 0 ? "var(--green)" : "var(--red)" }} className="num">
+                      {fmtDollarShort(weekExecPnl)}
+                    </span>
+                    <span style={{ fontSize: "0.5625rem", color: "var(--accent)", fontWeight: 600 }}>{weekExecs} IBKR</span>
                   </>
                 )}
               </div>
@@ -226,6 +265,14 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.625rem" }}>
             <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-primary)" }}>
               Movimientos del {selectedDay.split("-").reverse().join("/")}
+              {selectedExecs.length > 0 && (() => {
+                const total = selectedExecs.reduce((s, e) => s + e.realizedPnl, 0)
+                return (
+                  <span style={{ marginLeft: "0.75rem", fontWeight: 700, color: total > 0 ? "var(--green)" : total < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
+                    {total >= 0 ? "+" : ""}${total.toFixed(2)} realizado
+                  </span>
+                )
+              })()}
             </span>
             <button onClick={() => setSelectedDay(null)} style={{
               background: "transparent", border: "none", color: "var(--text-muted)",
