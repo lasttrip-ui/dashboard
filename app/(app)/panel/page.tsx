@@ -109,9 +109,18 @@ function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: numbe
 
 // ── NAV History Chart ─────────────────────────────────────────────────────────
 
-function NavHistoryCard() {
-  const first = navHistoryData[0].nav
-  const last  = navHistoryData[navHistoryData.length - 1].nav
+function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
+  // Use live IBKR NLV for the latest point so it always matches the account summary
+  const liveNav = snapshot?.summary?.netLiquidation
+  const data = useMemo(() => {
+    if (!liveNav) return navHistoryData
+    const copy = [...navHistoryData]
+    copy[copy.length - 1] = { ...copy[copy.length - 1], nav: Math.round(liveNav) }
+    return copy
+  }, [liveNav])
+
+  const first = data[0].nav
+  const last  = data[data.length - 1].nav
   const gain  = last - first
   const pct   = ((last / first - 1) * 100).toFixed(1)
   const color = "#22c55e"
@@ -153,7 +162,7 @@ function NavHistoryCard() {
       </div>
       <div style={{ flex: 1, minHeight: 140 }}>
         <ResponsiveContainer width="100%" height={160}>
-          <AreaChart data={navHistoryData} margin={{ top: 4, right: 8, bottom: 0, left: -4 }}>
+          <AreaChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -4 }}>
             <defs>
               <linearGradient id="grad_nav" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={color} stopOpacity={0.35} />
@@ -374,7 +383,7 @@ export default function PanelPage() {
       </div>
 
       {/* Row 2: Full NAV History */}
-      <NavHistoryCard />
+      <NavHistoryCard snapshot={snapshot} />
 
       {/* Row 3: Monthly Heatmap (multi-year) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>

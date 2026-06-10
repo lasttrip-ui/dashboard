@@ -266,5 +266,5 @@ export const navHistoryData = [
   { date: "2025-10", nav: 26805  },
   { date: "2025-11", nav: 28408  },
   { date: "2025-12", nav: 30679  },
-  { date: "2026-06", nav: 37403  },
+  { date: "2026-06", nav: 36236  },
 ]
