@@ -1,0 +1,35 @@
+name: Daily IBKR data update
+
+on:
+  schedule:
+    # Every day at 22:30 UTC (after US market close)
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Fetch latest data from IBKR Flex Web Service
+        env:
+          IBKR_FLEX_TOKEN: ${{ secrets.IBKR_FLEX_TOKEN }}
+          IBKR_FLEX_QUERY_ID: ${{ secrets.IBKR_FLEX_QUERY_ID }}
+        run: node scripts/update-ibkr-snapshot.js
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "ibkr-bot"
+          git config user.email "actions@github.com"
+          git add lib/ibkr-snapshot.json public/data/executions-history.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Daily IBKR data update ($(date -u +%Y-%m-%d))"
+            git push
+          fi

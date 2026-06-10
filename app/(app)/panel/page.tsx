@@ -8,7 +8,7 @@ import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
 import Calendar from "@/components/Calendar"
 import TickersSidebar from "@/components/TickersSidebar"
-import type { IBKRSnapshot } from "@/components/portfolio/types"
+import type { IBKRSnapshot, Trade as IBKRTrade } from "@/components/portfolio/types"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -313,6 +313,15 @@ export default function PanelPage() {
       .catch(() => null)
   }, [])
 
+  // Full real execution history (Apr 2025 → today) for the calendar
+  const [executions, setExecutions] = useState<IBKRTrade[]>([])
+  useEffect(() => {
+    fetch("/data/executions-history.json")
+      .then(r => r.ok ? r.json() : [])
+      .then(d => Array.isArray(d) && setExecutions(d))
+      .catch(() => null)
+  }, [])
+
   const periodTrades = filterByPeriod(trades, period)
   const stats = calcStats(periodTrades)
 
@@ -399,7 +408,7 @@ export default function PanelPage() {
           viewYear={viewYear}
           viewMonth={viewMonth}
           onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
-          executions={snapshot?.recentTrades ?? []}
+          executions={executions.length > 0 ? executions : (snapshot?.recentTrades ?? [])}
         />
         <TickersSidebar trades={trades} viewYear={viewYear} viewMonth={viewMonth} />
       </div>
