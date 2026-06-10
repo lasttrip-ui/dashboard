@@ -9,6 +9,7 @@ import {
   getMonthlyDividends, getDividendTotals, TOTAL_DIVIDENDS_2026,
 } from "@/lib/dividends"
 import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
+import { useLiveQuotes } from "@/hooks/use-live-quotes"
 
 const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
@@ -20,6 +21,7 @@ function PositionesTab({ positions }: { positions: Position[] }) {
   const stocks = positions.filter(p => p.assetClass === "STK")
   const options = positions.filter(p => p.assetClass === "OPT")
   const [view, setView] = useState<"STK" | "OPT">("STK")
+  const { live, lastUpdate } = useLiveQuotes(positions)
 
   function fmt(n: number, d = 2) {
     return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -29,7 +31,7 @@ function PositionesTab({ positions }: { positions: Position[] }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
         {(["STK", "OPT"] as const).map(t => (
           <button key={t} onClick={() => setView(t)} style={{
             padding: "0.3rem 0.875rem", borderRadius: 6, border: "none", cursor: "pointer",
@@ -39,6 +41,12 @@ function PositionesTab({ positions }: { positions: Position[] }) {
             {t === "STK" ? `Acciones (${stocks.length})` : `Opciones (${options.length})`}
           </button>
         ))}
+        {lastUpdate && (
+          <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.6875rem", color: "var(--text-muted)" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", animation: "pulse 2s infinite" }} />
+            Cotizaciones en vivo · {new Date(lastUpdate).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+        )}
       </div>
       <div style={{ overflowX: "auto" }}>
         <table className="tt-table">
@@ -56,6 +64,10 @@ function PositionesTab({ positions }: { positions: Position[] }) {
           <tbody>
             {list.map(p => {
               const ccy = p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : p.currency === "HKD" ? "HK$" : "$"
+              const lq = live.get(p.contractId)
+              const price = lq?.price ?? p.marketPrice
+              const value = lq?.marketValue ?? p.marketValue
+              const upnl = lq?.unrealizedPnl ?? p.unrealizedPnl
               return (
                 <tr key={p.contractId}>
                   <td style={{ fontWeight: 600 }}>{p.symbol}</td>
@@ -63,11 +75,14 @@ function PositionesTab({ positions }: { positions: Position[] }) {
                     {p.position > 0 ? "+" : ""}{p.position}
                   </td>
                   <td className="num">{ccy}{fmt(p.averagePrice)}</td>
-                  <td className="num">{ccy}{fmt(p.marketPrice)}</td>
+                  <td className="num" style={lq ? { color: "var(--text-primary)", fontWeight: 600 } : undefined}>
+                    {ccy}{fmt(price)}
+                    {lq && <span style={{ color: "var(--green)", fontSize: "0.5625rem", marginLeft: 3, verticalAlign: "super" }}>●</span>}
+                  </td>
                   <td style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{p.currency}</td>
-                  <td className="num">{ccy}{fmt(Math.abs(p.marketValue))}</td>
-                  <td className="num" style={{ color: p.unrealizedPnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 500 }}>
-                    {p.unrealizedPnl >= 0 ? "+" : "-"}{ccy}{fmt(Math.abs(p.unrealizedPnl))}
+                  <td className="num">{ccy}{fmt(Math.abs(value))}</td>
+                  <td className="num" style={{ color: upnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 500 }}>
+                    {upnl >= 0 ? "+" : "-"}{ccy}{fmt(Math.abs(upnl))}
                   </td>
                 </tr>
               )
