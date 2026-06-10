@@ -5,6 +5,10 @@ on:
     # Every day at 22:30 UTC (after US market close)
     - cron: "30 22 * * 1-5"
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/daily-ibkr-update.yml"
+      - "scripts/update-ibkr-snapshot.js"
 
 permissions:
   contents: write
