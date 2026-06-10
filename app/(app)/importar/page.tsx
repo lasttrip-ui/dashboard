@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { parseCSV, detectBroker, type Broker } from "@/lib/import-parser"
-import { loadImported, saveImported, clearImported } from "@/lib/trade-store"
+import { parseCSV, detectBroker, parseIBKRExecutions, type Broker, type ImportedExecution } from "@/lib/import-parser"
+import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs } from "@/lib/trade-store"
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
 
@@ -48,7 +48,9 @@ const INSTRUCTIONS: Record<Broker, { steps: string[]; note: string }> = {
 export default function ImportPage() {
   const [broker, setBroker] = useState<Broker>("IBKR")
   const [parsed, setParsed] = useState<OptionTrade[] | null>(null)
+  const [parsedExecs, setParsedExecs] = useState<ImportedExecution[]>([])
   const [saved, setSaved] = useState<OptionTrade[]>(() => loadImported())
+  const [savedExecs, setSavedExecs] = useState<ImportedExecution[]>(() => loadImportedExecs())
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -57,6 +59,7 @@ export default function ImportPage() {
   function processFile(file: File) {
     setError(null)
     setParsed(null)
+    setParsedExecs([])
     setFileName(file.name)
     const reader = new FileReader()
     reader.onload = e => {
@@ -64,10 +67,12 @@ export default function ImportPage() {
       const detectedBroker = detectBroker(text)
       if (detectedBroker !== broker) setBroker(detectedBroker)
       const result = parseCSV(text, detectedBroker)
-      if (result.length === 0) {
-        setError("No se encontraron opciones en el archivo. Comprueba que es un extracto de actividad correcto y que contiene operaciones con opciones.")
+      const execs = detectedBroker === "IBKR" ? parseIBKRExecutions(text) : []
+      if (result.length === 0 && execs.length === 0) {
+        setError("No se encontraron movimientos en el archivo. Comprueba que es un extracto de actividad de IBKR (con la sección «Operaciones») o un export de transacciones de DeGiro.")
       } else {
-        setParsed(result)
+        if (result.length > 0) setParsed(result)
+        if (execs.length > 0) setParsedExecs(execs)
       }
     }
     reader.readAsText(file, "utf-8")
@@ -87,20 +92,32 @@ export default function ImportPage() {
   }
 
   function handleSave() {
-    if (!parsed) return
-    const current = loadImported()
-    const ids = new Set(current.map(t => t.id))
-    const newOnes = parsed.filter(t => !ids.has(t.id))
-    const merged = [...current, ...newOnes]
-    saveImported(merged)
-    setSaved(merged)
+    if (parsed) {
+      const current = loadImported()
+      const ids = new Set(current.map(t => t.id))
+      const newOnes = parsed.filter(t => !ids.has(t.id))
+      const merged = [...current, ...newOnes]
+      saveImported(merged)
+      setSaved(merged)
+    }
+    if (parsedExecs.length > 0) {
+      const current = loadImportedExecs()
+      const ids = new Set(current.map(e => e.tradeId))
+      const newOnes = parsedExecs.filter(e => !ids.has(e.tradeId))
+      const merged = [...current, ...newOnes].sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
+      saveImportedExecs(merged)
+      setSavedExecs(merged)
+    }
     setParsed(null)
+    setParsedExecs([])
     setFileName(null)
   }
 
   function handleClear() {
     clearImported()
+    clearImportedExecs()
     setSaved([])
+    setSavedExecs([])
   }
 
   const info = INSTRUCTIONS[broker]
@@ -197,16 +214,20 @@ export default function ImportPage() {
       )}
 
       {/* Preview */}
-      {parsed && parsed.length > 0 && (
+      {(parsed || parsedExecs.length > 0) && (
         <div className="card" style={{ padding: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <div>
               <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                Vista previa — {parsed.length} operaciones detectadas
+                Vista previa
+                {parsed && ` — ${parsed.length} operaciones de opciones`}
+                {parsedExecs.length > 0 && ` — ${parsedExecs.length} movimientos (acciones + opciones)`}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
-                {parsed[0].date} → {parsed[parsed.length - 1].date}
-              </div>
+              {parsedExecs.length > 0 && (
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+                  {parsedExecs[0].tradeTime.slice(0, 10)} → {parsedExecs[parsedExecs.length - 1].tradeTime.slice(0, 10)}
+                </div>
+              )}
             </div>
             <button onClick={handleSave} style={{
               display: "flex", alignItems: "center", gap: "0.375rem",
@@ -219,7 +240,44 @@ export default function ImportPage() {
             </button>
           </div>
 
-          <div style={{ overflowX: "auto" }}>
+          {/* Executions preview */}
+          {parsedExecs.length > 0 && (
+            <div style={{ overflowX: "auto", marginBottom: parsed ? "1rem" : 0 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <thead>
+                  <tr>
+                    {["Fecha", "Símbolo", "Tipo", "Lado", "Cant.", "Precio", "P&L Realizado"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "0.375rem 0.5rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.6875rem", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--border)" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {parsedExecs.slice(0, 50).map((e, i) => (
+                    <tr key={e.tradeId} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-hover)" }}>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-muted)", fontFamily: "monospace", fontSize: "0.75rem" }}>{e.tradeTime.slice(0, 10)}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", fontWeight: 700, color: "var(--text-primary)" }}>{e.symbol}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>{e.secType}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", fontWeight: 600, color: e.side === "SELL" ? "var(--red)" : "var(--green)" }}>{e.side}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)" }} className="num">{e.size}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)" }} className="num">${e.price.toFixed(2)}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", fontWeight: 600, color: e.realizedPnl > 0 ? "var(--green)" : e.realizedPnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
+                        {e.realizedPnl !== 0 ? `${e.realizedPnl >= 0 ? "+" : ""}$${e.realizedPnl.toFixed(2)}` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {parsedExecs.length > 50 && (
+                <div style={{ textAlign: "center", padding: "0.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Mostrando los primeros 50 de {parsedExecs.length} movimientos
+                </div>
+              )}
+            </div>
+          )}
+
+          {parsed && <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
               <thead>
                 <tr>
@@ -253,6 +311,35 @@ export default function ImportPage() {
                 ))}
               </tbody>
             </table>
+          </div>}
+        </div>
+      )}
+
+      {/* Saved executions summary */}
+      {savedExecs.length > 0 && (
+        <div className="card" style={{ padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <CheckCircle size={16} color="var(--green)" />
+              <div>
+                <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {savedExecs.length} movimientos históricos importados
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Visibles en el calendario · {savedExecs[0]?.tradeTime.slice(0, 10)} → {savedExecs[savedExecs.length - 1]?.tradeTime.slice(0, 10)}
+                </div>
+              </div>
+            </div>
+            <button onClick={handleClear} style={{
+              display: "flex", alignItems: "center", gap: "0.375rem",
+              padding: "0.4rem 0.875rem", borderRadius: 8,
+              border: "1px solid rgba(239,68,68,0.3)",
+              background: "rgba(239,68,68,0.08)", color: "var(--red)",
+              cursor: "pointer", fontSize: "0.75rem", fontWeight: 600,
+            }}>
+              <Trash2 size={13} />
+              Limpiar todo
+            </button>
           </div>
         </div>
       )}

@@ -177,6 +177,107 @@ export function parseDeGiro(csv: string): OptionTrade[] {
   return trades
 }
 
+// ── Generic executions parser (all asset types, all years) ───────────────────
+// Reads the "Operaciones"/"Trades" section of an IBKR Activity Statement and
+// returns every stock/option execution as a calendar-compatible execution.
+
+export interface ImportedExecution {
+  tradeId: string
+  symbol: string
+  secType: string
+  side: "BUY" | "SELL"
+  size: number
+  price: number
+  tradeTime: string
+  commission: number
+  netAmount: number
+  realizedPnl: number
+}
+
+const STOCK_CATS = ["acciones", "stocks"]
+const OPTION_CATS = ["opciones", "equity and index options", "opciones sobre acciones y sobre índices", "opciones sobre acciones"]
+
+function num(s: string | undefined): number {
+  if (!s) return 0
+  const v = parseFloat(s.replace(/"/g, "").replace(",", "."))
+  return isNaN(v) ? 0 : v
+}
+
+export function parseIBKRExecutions(csv: string): ImportedExecution[] {
+  const out: ImportedExecution[] = []
+  const lines = csv.split(/\r?\n/)
+  let cols: Record<string, number> = {}
+  let counter = 0
+
+  for (const line of lines) {
+    const c = parseLine(line)
+    const section = (c[0] || "").toLowerCase()
+    if (section !== "operaciones" && section !== "trades" && section !== "transacciones") continue
+
+    const rowType = (c[1] || "").toLowerCase()
+
+    if (rowType === "header") {
+      // Map column names (ES/EN) to indices
+      cols = {}
+      c.forEach((name, i) => {
+        const n = name.toLowerCase().trim()
+        if (n === "categoría de activo" || n === "asset category") cols.cat = i
+        if (n === "divisa" || n === "currency") cols.ccy = i
+        if (n === "símbolo" || n === "symbol") cols.sym = i
+        if (n === "fecha/hora" || n === "date/time") cols.dt = i
+        if (n === "cantidad" || n === "quantity") cols.qty = i
+        if (n === "precio trans." || n === "t. price" || n === "precio de transacción") cols.price = i
+        if (n === "productos" || n === "proceeds") cols.proceeds = i
+        if (n.startsWith("tarifa/com") || n.startsWith("comm")) cols.comm = i
+        if (n === "pyg realizadas" || n === "realized p/l") cols.pnl = i
+        if (n === "datadiscriminator") cols.disc = i
+      })
+      continue
+    }
+
+    if (rowType !== "data" && rowType !== "datos") continue
+    if (cols.sym === undefined || cols.dt === undefined) continue
+
+    const disc = (c[cols.disc] || "").toLowerCase()
+    if (cols.disc !== undefined && disc !== "order" && disc !== "trade") continue
+
+    const cat = (c[cols.cat] || "").toLowerCase()
+    const isStock = STOCK_CATS.some(s => cat.includes(s) && !cat.includes("opciones"))
+    const isOption = OPTION_CATS.some(s => cat.includes(s))
+    if (!isStock && !isOption) continue // skip forex, CFDs, etc.
+
+    const rawSym = (c[cols.sym] || "").trim()
+    if (!rawSym) continue
+    // Options symbol like "ZETA 15NOV24 25 P" → underlying ticker
+    const symbol = rawSym.split(/\s+/)[0]
+
+    const dtRaw = (c[cols.dt] || "").replace(/"/g, "")
+    const dPart = dtRaw.split(",")[0].trim()
+    const tPart = (dtRaw.split(",")[1] || "00:00:00").trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dPart)) continue
+
+    const qty = num(c[cols.qty])
+    if (qty === 0) continue
+    const price = num(c[cols.price])
+
+    counter++
+    out.push({
+      tradeId: `imp_${dPart}_${symbol}_${counter}`,
+      symbol,
+      secType: isOption ? "OPT" : "STK",
+      side: qty < 0 ? "SELL" : "BUY",
+      size: Math.abs(qty),
+      price,
+      tradeTime: `${dPart}T${tPart}Z`,
+      commission: Math.abs(num(c[cols.comm])),
+      netAmount: Math.abs(num(c[cols.proceeds])),
+      realizedPnl: num(c[cols.pnl]),
+    })
+  }
+
+  return out.sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
+}
+
 // ── Auto-detect broker ────────────────────────────────────────────────────────
 
 export function detectBroker(csv: string): Broker {

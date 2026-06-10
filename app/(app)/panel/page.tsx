@@ -313,12 +313,23 @@ export default function PanelPage() {
       .catch(() => null)
   }, [])
 
-  // Full real execution history (Apr 2025 → today) for the calendar
+  // Full real execution history (Apr 2025 → today) + imported CSVs for the calendar
   const [executions, setExecutions] = useState<IBKRTrade[]>([])
   useEffect(() => {
     fetch("/data/executions-history.json")
       .then(r => r.ok ? r.json() : [])
-      .then(d => Array.isArray(d) && setExecutions(d))
+      .then((d: IBKRTrade[]) => {
+        if (!Array.isArray(d)) d = []
+        // Merge imported executions (older CSV history), dedupe by tradeId
+        try {
+          const raw = localStorage.getItem("tt-imported-execs")
+          const imported: IBKRTrade[] = raw ? JSON.parse(raw) : []
+          const ids = new Set(d.map(e => e.tradeId))
+          d = [...d, ...imported.filter(e => !ids.has(e.tradeId))]
+          d.sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
+        } catch { /* ignore */ }
+        setExecutions(d)
+      })
       .catch(() => null)
   }, [])
 
