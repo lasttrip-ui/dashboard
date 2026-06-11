@@ -197,17 +197,38 @@ function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 
 // ── Monthly Heatmap ───────────────────────────────────────────────────────────
 
-function MonthlyHeatmap({ year = 2026, trades }: { year?: number; trades: import("@/lib/data").OptionTrade[] }) {
+function MonthlyHeatmap({
+  year = 2026,
+  trades,
+  executions = [],
+}: {
+  year?: number
+  trades: import("@/lib/data").OptionTrade[]
+  executions?: IBKRTrade[]
+}) {
   const monthlyPnl = useMemo(() => {
     const result: Record<number, number> = {}
+
+    // Real IBKR execution P&L (non-zero entries only, any secType)
+    for (const e of executions) {
+      if (!e.realizedPnl || e.realizedPnl === 0) continue
+      const ey = parseInt(e.tradeTime.slice(0, 4), 10)
+      const em = parseInt(e.tradeTime.slice(5, 7), 10)
+      if (ey === year) result[em] = (result[em] ?? 0) + e.realizedPnl
+    }
+
+    // OptionTrade P&L for months where no execution data exists
     for (let m = 1; m <= 12; m++) {
+      if (result[m] !== undefined) continue
       const monthTrades = filterByMonth(trades, year, m)
       if (monthTrades.length > 0) {
-        result[m] = calcStats(monthTrades).totalPnl
+        const pnl = calcStats(monthTrades).totalPnl
+        if (pnl !== 0) result[m] = pnl
       }
     }
+
     return result
-  }, [year, trades])
+  }, [year, trades, executions])
 
   const total = Object.values(monthlyPnl).reduce((s, v) => s + v, 0)
 
@@ -407,9 +428,9 @@ export default function PanelPage() {
 
       {/* Row 3: Monthly Heatmap (multi-year) */}
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <MonthlyHeatmap year={2024} trades={trades} />
-        <MonthlyHeatmap year={2025} trades={trades} />
-        <MonthlyHeatmap year={2026} trades={trades} />
+        <MonthlyHeatmap year={2024} trades={trades} executions={executions} />
+        <MonthlyHeatmap year={2025} trades={trades} executions={executions} />
+        <MonthlyHeatmap year={2026} trades={trades} executions={executions} />
       </div>
 
       {/* Row 4: Calendar + Tickers sidebar */}

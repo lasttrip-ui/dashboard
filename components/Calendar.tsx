@@ -180,7 +180,7 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                     }}>
                       {date.getDate()}
                     </span>
-                    {dd && isCurrentMonth && (
+                    {dd && isCurrentMonth && dd.pnl !== 0 && (
                       <>
                         <span style={{
                           fontSize: "0.6875rem",
@@ -188,29 +188,22 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                           color: isProfitable ? "var(--green)" : isLoss ? "var(--red)" : "var(--text-secondary)",
                           lineHeight: 1,
                         }} className="num">
-                          {dd.pnl >= 0 ? "+" : ""}{Math.round(dd.pnl) >= 0 ? "" : ""}{fmtDollarShort(dd.pnl)}
+                          {fmtDollarShort(dd.pnl)}
                         </span>
                         <span style={{ fontSize: "0.625rem", color: "var(--text-muted)", lineHeight: 1 }}>
                           {dd.tradeCount}t
                         </span>
                       </>
                     )}
-                    {dayExecs && isCurrentMonth && (
-                      <>
-                        {dayExecPnl !== 0 && (
-                          <span style={{
-                            fontSize: "0.625rem",
-                            fontWeight: 700,
-                            color: dayExecPnl > 0 ? "var(--green)" : "var(--red)",
-                            lineHeight: 1,
-                          }} className="num">
-                            {fmtDollarShort(dayExecPnl)}
-                          </span>
-                        )}
-                        <span style={{ fontSize: "0.5625rem", color: "var(--accent)", lineHeight: 1, fontWeight: 600 }}>
-                          {dayExecs.length} IBKR
-                        </span>
-                      </>
+                    {dayExecs && isCurrentMonth && dayExecPnl !== 0 && (
+                      <span style={{
+                        fontSize: "0.625rem",
+                        fontWeight: 700,
+                        color: dayExecPnl > 0 ? "var(--green)" : "var(--red)",
+                        lineHeight: 1,
+                      }} className="num">
+                        {fmtDollarShort(dayExecPnl)}
+                      </span>
                     )}
                   </div>
                 )
@@ -231,21 +224,18 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 gap: "2px",
                 borderLeft: "1px solid var(--border-subtle)",
               }}>
-                {weekTrades > 0 && (
+                {weekTrades > 0 && weekPnl !== 0 && (
                   <>
                     <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: weekPnl >= 0 ? "var(--green)" : "var(--red)" }} className="num">
-                      {weekPnl >= 0 ? "+" : ""}{fmtDollarShort(weekPnl)}
+                      {fmtDollarShort(weekPnl)}
                     </span>
                     <span style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>{weekTrades}t</span>
                   </>
                 )}
-                {weekExecs > 0 && (
-                  <>
-                    <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: weekExecPnl >= 0 ? "var(--green)" : "var(--red)" }} className="num">
-                      {fmtDollarShort(weekExecPnl)}
-                    </span>
-                    <span style={{ fontSize: "0.5625rem", color: "var(--accent)", fontWeight: 600 }}>{weekExecs} IBKR</span>
-                  </>
+                {weekExecPnl !== 0 && (
+                  <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: weekExecPnl >= 0 ? "var(--green)" : "var(--red)" }} className="num">
+                    {fmtDollarShort(weekExecPnl)}
+                  </span>
                 )}
               </div>
             </div>

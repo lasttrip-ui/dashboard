@@ -1,6 +1,6 @@
 import { OptionTrade } from "./data"
 
-export const TODAY = "2026-06-06"
+export const TODAY = new Date().toISOString().slice(0, 10)
 
 // ── Number formatting ──────────────────────────────────────────────────────
 
