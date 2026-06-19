@@ -13,10 +13,8 @@ import {
   TODAY,
   calcStats,
   fmtDollar,
-  fmtDollarAbs,
   getMarketHoliday,
 } from "@/lib/utils"
-import ProfitFactorChart from "@/components/ProfitFactorChart"
 
 const DAY_HEADERS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]
 
@@ -120,10 +118,6 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
               🔥 <span className="num">{winStreak}</span>
             </span>
           )}
-          <span style={{ fontSize: "0.8125rem", color: "var(--accent)" }}>
-            Crédito abierto&nbsp;
-            <span className="num" style={{ fontWeight: 700 }}>{fmtDollarAbs(monthStats.openCredit, 0)}</span>
-          </span>
           <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
             <span className="num">{monthStats.tradeCount}</span> trades&nbsp;&nbsp;
             <span style={{ color: monthStats.totalPnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }} className="num">
@@ -133,23 +127,6 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
           <button onClick={goToday} style={todayBtnStyle}>Este mes</button>
         </div>
       </div>
-
-      {/* Profit factor of the viewed month */}
-      {monthStats.tradeCount > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.625rem", padding: "0.5rem 0.75rem", background: "var(--bg-primary)", border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
-          <div style={{ width: 56, flexShrink: 0 }}>
-            <ProfitFactorChart
-              profitFactor={monthStats.profitFactor}
-              totalGains={monthStats.totalGains}
-              totalLosses={monthStats.totalLosses}
-              size="small"
-            />
-          </div>
-          <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Factor de beneficio · {MONTH_NAMES_ES[viewMonth - 1]}
-          </span>
-        </div>
-      )}
 
       {/* Day headers */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 80px", gap: "2px", marginBottom: "2px" }}>
@@ -225,7 +202,7 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                       background: bg,
                       borderRadius: "6px",
                       padding: "0.375rem 0.25rem",
-                      minHeight: "56px",
+                      minHeight: "64px",
                       display: "flex",
                       flexDirection: "column",
                       alignItems: "center",
@@ -291,11 +268,11 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
               {/* Week summary column */}
               <div style={{
                 background: (weekTrades > 0 || weekExecs > 0)
-                  ? ((weekPnl + weekExecPnl) >= 0 ? "rgba(34,197,94,0.07)" : "rgba(239,68,68,0.07)")
+                  ? "rgba(251,146,60,0.14)"
                   : "transparent",
                 borderRadius: "6px",
                 padding: "0.375rem 0.375rem",
-                minHeight: "56px",
+                minHeight: "64px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
@@ -303,6 +280,9 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 gap: "2px",
                 borderLeft: "1px solid var(--border-subtle)",
               }}>
+                <span style={{ fontSize: "0.625rem", color: "var(--orange)", fontWeight: 700, letterSpacing: "0.04em" }}>
+                  S{wi + 1}
+                </span>
                 {weekTrades > 0 && weekPnl !== 0 && (
                   <>
                     <span style={{ fontSize: "0.6875rem", fontWeight: 700, color: weekPnl >= 0 ? "var(--green)" : "var(--red)" }} className="num">

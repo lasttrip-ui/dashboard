@@ -73,10 +73,11 @@ export default function TickersSidebar({ trades, viewYear, viewMonth }: TickersS
         <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>
           Crédito Abierto
         </div>
-        <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--green)" }} className="num">
+        <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#3b82f6" }} className="num">
           {fmtDollarAbs(allStats.openCredit)}
         </div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+        <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.375rem" }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#3b82f6", display: "inline-block" }} />
           {allOpenTrades.length} posiciones abiertas
         </div>
       </div>
