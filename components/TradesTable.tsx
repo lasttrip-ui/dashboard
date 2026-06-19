@@ -14,6 +14,7 @@ import {
 } from "@/lib/utils"
 
 type StatusFilter = "todos" | "abiertos" | "cerrados"
+type StrategyFilter = "todos" | "Put" | "Call"
 type SortDir = "asc" | "desc"
 
 interface TradesTableProps {
@@ -37,8 +38,10 @@ const navBtnStyle: React.CSSProperties = {
 export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange }: TradesTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos")
   const [tickerFilter, setTickerFilter] = useState<string>("todos")
+  const [strategyFilter, setStrategyFilter] = useState<StrategyFilter>("todos")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [tickerOpen, setTickerOpen] = useState(false)
+  const [strategyOpen, setStrategyOpen] = useState(false)
 
   const monthTrades = filterByMonth(trades, viewYear, viewMonth)
 
@@ -56,6 +59,7 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
     else if (statusFilter === "cerrados") result = result.filter(t => t.status === "closed")
 
     if (tickerFilter !== "todos") result = result.filter(t => t.ticker === tickerFilter)
+    if (strategyFilter !== "todos") result = result.filter(t => t.type === strategyFilter)
 
     // Sort by % prima capturada
     result.sort((a, b) => {
@@ -65,7 +69,7 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
     })
 
     return result
-  }, [monthTrades, statusFilter, tickerFilter, sortDir])
+  }, [monthTrades, statusFilter, tickerFilter, strategyFilter, sortDir])
 
   // Stats
   const openCount = filtered.filter(t => t.status === "open").length
@@ -136,8 +140,54 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
           ))}
         </div>
 
-        {/* Ticker filter */}
+        {/* Strategy filter */}
         <div style={{ position: "relative", marginLeft: "auto" }}>
+          <button
+            onClick={e => { e.stopPropagation(); setStrategyOpen(v => !v) }}
+            style={{
+              padding: "0.3rem 0.75rem",
+              background: strategyFilter !== "todos" ? "var(--purple-dim)" : "var(--bg-primary)",
+              border: "1px solid " + (strategyFilter !== "todos" ? "var(--purple)" : "var(--border)"),
+              borderRadius: "8px",
+              color: strategyFilter !== "todos" ? "var(--purple)" : "var(--text-secondary)",
+              fontSize: "0.8125rem",
+              cursor: "pointer",
+              fontWeight: strategyFilter !== "todos" ? 600 : 400,
+            }}
+          >
+            {strategyFilter === "todos" ? "Estrategia ▼" : `${strategyFilter} ▼`}
+          </button>
+          {strategyOpen && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                top: "calc(100% + 6px)",
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: "10px",
+                overflow: "hidden",
+                minWidth: "120px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                zIndex: 100,
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {(["todos", "Put", "Call"] as StrategyFilter[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setStrategyFilter(s); setStrategyOpen(false) }}
+                  style={tickerItemStyle(strategyFilter === s)}
+                >
+                  {s === "todos" ? "Todos" : s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ticker filter */}
+        <div style={{ position: "relative" }}>
           <button
             onClick={e => { e.stopPropagation(); setTickerOpen(v => !v) }}
             style={{

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, MONTH_NAMES_ES } from "@/lib/utils"
 import TradesTable from "@/components/TradesTable"
+import AddTradeModal from "@/components/AddTradeModal"
 import { TODAY } from "@/lib/utils"
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -26,6 +27,7 @@ export default function OperacionesPage() {
   const [ty, tm] = TODAY.split("-").map(Number)
   const [viewYear, setViewYear] = useState(ty)
   const [viewMonth, setViewMonth] = useState(tm)
+  const [showAddModal, setShowAddModal] = useState(false)
 
   const monthTrades = filterByMonth(trades, viewYear, viewMonth)
   const stats = calcStats(monthTrades)
@@ -45,7 +47,7 @@ export default function OperacionesPage() {
           </p>
         </div>
         {/* Stats strip */}
-        <div style={{ display: "flex", gap: "1.5rem" }}>
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           {[
             { label: "P&L mes", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" },
             { label: "Ganadas", value: `${stats.wins}`, color: "var(--green)" },
@@ -57,6 +59,21 @@ export default function OperacionesPage() {
               <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color: s.color }}>{s.value}</div>
             </div>
           ))}
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              padding: "0.4rem 0.875rem",
+              borderRadius: "8px",
+              border: "none",
+              background: "var(--accent)",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: "0.8125rem",
+              cursor: "pointer",
+            }}
+          >
+            + Nueva
+          </button>
         </div>
       </div>
 
@@ -67,6 +84,10 @@ export default function OperacionesPage() {
         viewMonth={viewMonth}
         onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
       />
+
+      {showAddModal && (
+        <AddTradeModal onClose={() => setShowAddModal(false)} onSaved={() => {}} />
+      )}
     </div>
   )
 }

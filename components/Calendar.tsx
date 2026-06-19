@@ -13,7 +13,10 @@ import {
   TODAY,
   calcStats,
   fmtDollar,
+  fmtDollarAbs,
+  getMarketHoliday,
 } from "@/lib/utils"
+import ProfitFactorChart from "@/components/ProfitFactorChart"
 
 const DAY_HEADERS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]
 
@@ -58,6 +61,35 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
   const selectedTrades = selectedDay ? trades.filter(t => t.date === selectedDay) : []
   const selectedExecs = selectedDay ? (execsByDay.get(selectedDay) ?? []) : []
 
+  // Days within the viewed month where a position was opened and nothing closed (still pending)
+  const openTradesByDay = useMemo(() => {
+    const opens = new Map<string, number>()
+    const hasClosed = new Map<string, boolean>()
+    for (const t of monthTrades) {
+      if (t.status === "open") opens.set(t.date, (opens.get(t.date) ?? 0) + 1)
+      else hasClosed.set(t.date, true)
+    }
+    hasClosed.forEach((_, d) => opens.delete(d))
+    return opens
+  }, [monthTrades])
+
+  // Current win-streak: consecutive most-recent days (any month, full history) with positive combined P&L
+  const winStreak = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const t of trades) {
+      map.set(t.date, (map.get(t.date) ?? 0) + tradePnl(t))
+    }
+    execPnlByDay.forEach((v, d) => map.set(d, (map.get(d) ?? 0) + v))
+    const sortedDates = Array.from(map.keys()).sort()
+    let streak = 0
+    for (let i = sortedDates.length - 1; i >= 0; i--) {
+      const pnl = map.get(sortedDates[i])!
+      if (pnl > 0) streak++
+      else break
+    }
+    return streak
+  }, [trades, execPnlByDay])
+
   function navigate(dir: -1 | 1) {
     let m = viewMonth + dir
     let y = viewYear
@@ -83,6 +115,15 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
           <button onClick={() => navigate(1)} style={navBtnStyle}>{">"}</button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          {winStreak > 0 && (
+            <span style={{ fontSize: "0.8125rem", color: "var(--orange)", fontWeight: 600 }}>
+              🔥 <span className="num">{winStreak}</span>
+            </span>
+          )}
+          <span style={{ fontSize: "0.8125rem", color: "var(--accent)" }}>
+            Crédito abierto&nbsp;
+            <span className="num" style={{ fontWeight: 700 }}>{fmtDollarAbs(monthStats.openCredit, 0)}</span>
+          </span>
           <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)" }}>
             <span className="num">{monthStats.tradeCount}</span> trades&nbsp;&nbsp;
             <span style={{ color: monthStats.totalPnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }} className="num">
@@ -92,6 +133,23 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
           <button onClick={goToday} style={todayBtnStyle}>Este mes</button>
         </div>
       </div>
+
+      {/* Profit factor of the viewed month */}
+      {monthStats.tradeCount > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", marginBottom: "0.625rem", padding: "0.5rem 0.75rem", background: "var(--bg-primary)", border: "1px solid var(--border-subtle)", borderRadius: "8px" }}>
+          <div style={{ width: 56, flexShrink: 0 }}>
+            <ProfitFactorChart
+              profitFactor={monthStats.profitFactor}
+              totalGains={monthStats.totalGains}
+              totalLosses={monthStats.totalLosses}
+              size="small"
+            />
+          </div>
+          <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Factor de beneficio · {MONTH_NAMES_ES[viewMonth - 1]}
+          </span>
+        </div>
+      )}
 
       {/* Day headers */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 80px", gap: "2px", marginBottom: "2px" }}>
@@ -135,11 +193,16 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 const dayExecPnl = execPnlByDay.get(ds) ?? 0
                 const hasAny = !!dd || !!dayExecs
                 const isSelected = selectedDay === ds
+                const isOpenOnly = isCurrentMonth && openTradesByDay.has(ds)
+                const holiday = isCurrentMonth ? getMarketHoliday(ds) : undefined
 
                 let bg = "transparent"
                 let textColor = "var(--text-muted)"
                 if (isToday) {
                   bg = "rgba(59,130,246,0.18)"
+                  textColor = "var(--accent)"
+                } else if (isOpenOnly) {
+                  bg = "rgba(59,130,246,0.14)"
                   textColor = "var(--accent)"
                 } else if (dd && isCurrentMonth) {
                   bg = isProfitable ? "rgba(34,197,94,0.12)" : isLoss ? "rgba(239,68,68,0.12)" : "var(--bg-hover)"
@@ -147,6 +210,9 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                 } else if (dayExecs && isCurrentMonth) {
                   bg = dayExecPnl > 0 ? "rgba(34,197,94,0.07)" : dayExecPnl < 0 ? "rgba(239,68,68,0.07)" : "var(--bg-hover)"
                   textColor = "var(--text-primary)"
+                } else if (holiday) {
+                  bg = "var(--purple-dim)"
+                  textColor = "var(--purple)"
                 }
 
                 return (
@@ -180,30 +246,43 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
                     }}>
                       {date.getDate()}
                     </span>
-                    {dd && isCurrentMonth && dd.pnl !== 0 && (
-                      <>
-                        <span style={{
-                          fontSize: "0.6875rem",
-                          fontWeight: 700,
-                          color: isProfitable ? "var(--green)" : isLoss ? "var(--red)" : "var(--text-secondary)",
-                          lineHeight: 1,
-                        }} className="num">
-                          {fmtDollarShort(dd.pnl)}
-                        </span>
-                        <span style={{ fontSize: "0.625rem", color: "var(--text-muted)", lineHeight: 1 }}>
-                          {dd.tradeCount}t
-                        </span>
-                      </>
-                    )}
-                    {dayExecs && isCurrentMonth && dayExecPnl !== 0 && (
-                      <span style={{
-                        fontSize: "0.625rem",
-                        fontWeight: 700,
-                        color: dayExecPnl > 0 ? "var(--green)" : "var(--red)",
-                        lineHeight: 1,
-                      }} className="num">
-                        {fmtDollarShort(dayExecPnl)}
+                    {isOpenOnly ? (
+                      <span style={{ fontSize: "0.625rem", fontWeight: 700, color: "var(--accent)", letterSpacing: "0.04em" }}>
+                        OPEN
                       </span>
+                    ) : (
+                      <>
+                        {dd && isCurrentMonth && dd.pnl !== 0 && (
+                          <>
+                            <span style={{
+                              fontSize: "0.6875rem",
+                              fontWeight: 700,
+                              color: isProfitable ? "var(--green)" : isLoss ? "var(--red)" : "var(--text-secondary)",
+                              lineHeight: 1,
+                            }} className="num">
+                              {fmtDollarShort(dd.pnl)}
+                            </span>
+                            <span style={{ fontSize: "0.625rem", color: "var(--text-muted)", lineHeight: 1 }}>
+                              {dd.tradeCount}t
+                            </span>
+                          </>
+                        )}
+                        {dayExecs && isCurrentMonth && dayExecPnl !== 0 && (
+                          <span style={{
+                            fontSize: "0.625rem",
+                            fontWeight: 700,
+                            color: dayExecPnl > 0 ? "var(--green)" : "var(--red)",
+                            lineHeight: 1,
+                          }} className="num">
+                            {fmtDollarShort(dayExecPnl)}
+                          </span>
+                        )}
+                        {holiday && !dd && !dayExecs && (
+                          <span style={{ fontSize: "0.5rem", color: "var(--purple)", textAlign: "center", lineHeight: 1.1, fontWeight: 600, padding: "0 2px" }}>
+                            {holiday}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 )
