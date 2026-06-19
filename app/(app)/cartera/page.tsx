@@ -3,7 +3,11 @@
 import { useState, useEffect, useMemo } from "react"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Treemap,
+  AreaChart, Area,
 } from "recharts"
+import { Info } from "lucide-react"
+import { useAllTrades } from "@/hooks/use-all-trades"
+import { realizedPnl, TODAY, parseDate, dateToString } from "@/lib/utils"
 import {
   DIVIDEND_DATA_2026,
   TOTAL_DIVIDENDS_2026,
@@ -20,6 +24,7 @@ import type { DividendEntry } from "@/lib/dividends"
 import type { IBKRSnapshot, Position, Balance } from "@/components/portfolio/types"
 import { useLiveQuotes } from "@/hooks/use-live-quotes"
 import { dteRemaining } from "@/lib/utils"
+import type { OptionTrade } from "@/lib/data"
 
 const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
@@ -521,7 +526,76 @@ function DividendosTab() {
 
 // ── Seguimiento de Cartera ────────────────────────────────────────────────────
 
+type EvolPeriod = "1m" | "3m" | "6m" | "ytd" | "1y" | "all"
+
+const EVOL_PERIOD_LABELS: Record<EvolPeriod, string> = {
+  "1m": "1M", "3m": "3M", "6m": "6M", ytd: "YTD", "1y": "1Y", all: "ALL",
+}
+
+function startDateForEvolPeriod(period: EvolPeriod): string | null {
+  if (period === "all") return null
+  const d = parseDate(TODAY)
+  if (period === "ytd") {
+    d.setMonth(0, 1)
+  } else {
+    const monthsBack = period === "1m" ? 1 : period === "3m" ? 3 : period === "6m" ? 6 : 12
+    d.setMonth(d.getMonth() - monthsBack)
+  }
+  return dateToString(d)
+}
+
+interface EquityPoint { date: string; cumulative: number }
+
+function buildEquitySeries(trades: OptionTrade[], dividends: { month: number; amount: number; date?: string }[]): EquityPoint[] {
+  const byDate = new Map<string, number>()
+  for (const t of trades) {
+    if (t.status !== "closed") continue
+    const pnl = realizedPnl(t)
+    byDate.set(t.date, (byDate.get(t.date) ?? 0) + pnl)
+  }
+  for (const d of dividends) {
+    const date = d.date ?? `2026-${String(d.month).padStart(2, "0")}-01`
+    byDate.set(date, (byDate.get(date) ?? 0) + d.amount)
+  }
+  const sortedDates = Array.from(byDate.keys()).sort()
+  let cumulative = 0
+  return sortedDates.map(date => {
+    cumulative += byDate.get(date) ?? 0
+    return { date, cumulative }
+  })
+}
+
 function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
+  const [evolPeriod, setEvolPeriod] = useState<EvolPeriod>("ytd")
+  const trades = useAllTrades()
+  const [importedDivs, setImportedDivs] = useState<ImportedDividend[]>([])
+
+  useEffect(() => {
+    setImportedDivs(loadImportedDividends())
+    const onStorage = () => setImportedDivs(loadImportedDividends())
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
+  const allDividends = useMemo(() => {
+    const divs2026 = DIVIDEND_DATA_2026.map(d => ({ month: d.month, amount: d.amount }))
+    const imported = importedDivs.map(d => ({ month: parseInt((d.date ?? "0000-01-01").slice(5, 7), 10), amount: d.amount, date: d.date }))
+    return [...divs2026, ...imported]
+  }, [importedDivs])
+
+  const fullSeries = useMemo(() => buildEquitySeries(trades, allDividends), [trades, allDividends])
+
+  const { chartData, baseline, periodChange, allTimeTotal } = useMemo(() => {
+    if (fullSeries.length === 0) return { chartData: [] as EquityPoint[], baseline: 0, periodChange: 0, allTimeTotal: 0 }
+    const startDate = startDateForEvolPeriod(evolPeriod)
+    const before = startDate ? fullSeries.filter(p => p.date < startDate) : []
+    const base = before.length > 0 ? before[before.length - 1].cumulative : 0
+    const slice = startDate ? fullSeries.filter(p => p.date >= startDate) : fullSeries
+    const total = fullSeries[fullSeries.length - 1].cumulative
+    const last = slice.length > 0 ? slice[slice.length - 1].cumulative : base
+    return { chartData: slice, baseline: base, periodChange: last - base, allTimeTotal: total }
+  }, [fullSeries, evolPeriod])
+
   if (!snapshot) return (
     <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
       Cargando datos de IBKR…
@@ -530,7 +604,6 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 
   const s = snapshot.summary
   const base = snapshot.balances.find(b => b.currency === "BASE")
-  const usd = snapshot.balances.find(b => b.currency === "USD")
   const upnl = base?.unrealizedPnl ?? 0
 
   return (
@@ -550,6 +623,75 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
           </div>
         ))}
       </div>
+
+      {/* Evolution chart */}
+      <div className="card">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem", flexWrap: "wrap", gap: "0.5rem" }}>
+          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Evolución de P&L acumulado
+          </div>
+          <div style={{ display: "flex", gap: "2px", background: "var(--bg-primary)", borderRadius: "8px", padding: "2px" }}>
+            {(Object.keys(EVOL_PERIOD_LABELS) as EvolPeriod[]).map(p => (
+              <button key={p} onClick={() => setEvolPeriod(p)} style={{
+                padding: "0.3rem 0.75rem", borderRadius: 6, border: "none", cursor: "pointer",
+                background: evolPeriod === p ? "var(--accent)" : "transparent",
+                color: evolPeriod === p ? "#fff" : "var(--text-secondary)",
+                fontSize: "0.75rem", fontWeight: evolPeriod === p ? 600 : 400,
+              }}>
+                {EVOL_PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.875rem" }}>
+          <div>
+            <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado al inicio</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{baseline >= 0 ? "+" : ""}${baseline.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>Variación del periodo</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: periodChange >= 0 ? "var(--green)" : "var(--red)" }}>{periodChange >= 0 ? "+" : ""}${periodChange.toFixed(2)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado total</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{allTimeTotal >= 0 ? "+" : ""}${allTimeTotal.toFixed(2)}</div>
+          </div>
+        </div>
+
+        {chartData.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)", fontSize: "0.8125rem" }}>
+            Sin operaciones cerradas o dividendos en este periodo.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
+              <defs>
+                <linearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} minTickGap={30} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={56} />
+              <Tooltip
+                contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
+                formatter={(v: number) => [`$${v.toFixed(2)}`, "Acumulado"]}
+              />
+              <Area type="monotone" dataKey="cumulative" stroke="var(--accent)" strokeWidth={2} fill="url(#equityFill)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+
+        {/* Data limitation callout */}
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start", marginTop: "0.875rem", padding: "0.75rem", background: "var(--bg-primary)", borderRadius: 8 }}>
+          <Info size={14} color="var(--text-muted)" style={{ marginTop: 1, flexShrink: 0 }} />
+          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+            Esta curva aproxima la evolución de tu cartera a partir del P&L realizado de tus opciones (atribuido a su fecha de apertura, no de cierre) y tus dividendos. No incluye aportaciones ni retiradas de capital, por lo que no es un cálculo estricto de TWR — limitación de los datos disponibles del Flex Query de IBKR.
+          </div>
+        </div>
+      </div>
+
       <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textAlign: "center" }}>
         Datos actualizados: {new Date(snapshot.lastUpdated).toLocaleString("es-ES")}
       </div>
