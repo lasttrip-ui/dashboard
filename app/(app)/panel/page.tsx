@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { cumulativePnlData, navHistoryData } from "@/lib/data"
 import { useAllTrades } from "@/hooks/use-all-trades"
-import { calcStats, filterByPeriod, filterByMonth, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
+import { calcStats, filterByPeriod, filterByMonth, filterByDateRange, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
+import PeriodSelector from "@/components/PeriodSelector"
 import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
 import Calendar from "@/components/Calendar"
@@ -295,28 +296,12 @@ function MonthlyHeatmap({
   )
 }
 
-// ── Period Button ─────────────────────────────────────────────────────────────
-
-function PeriodBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={{
-      padding: "0.3rem 0.75rem",
-      borderRadius: 6,
-      border: "none",
-      cursor: "pointer",
-      background: active ? "var(--accent)" : "var(--bg-hover)",
-      color: active ? "#fff" : "var(--text-secondary)",
-      fontSize: "0.75rem",
-      fontWeight: active ? 600 : 400,
-    }}>{label}</button>
-  )
-}
-
 // ── Main Panel Page ───────────────────────────────────────────────────────────
 
 export default function PanelPage() {
   const trades = useAllTrades()
   const [period, setPeriod] = useState<PeriodKey>("anio")
+  const [customRange, setCustomRange] = useState<{ from: string; to: string } | null>(null)
   const [viewYear, setViewYear] = useState(2026)
   const [viewMonth, setViewMonth] = useState(6)
   const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
@@ -354,13 +339,18 @@ export default function PanelPage() {
       .catch(() => null)
   }, [])
 
-  const periodTrades = filterByPeriod(trades, period)
+  const periodTrades = period === "custom" && customRange
+    ? filterByDateRange(trades, customRange.from, customRange.to)
+    : filterByPeriod(trades, period)
   const stats = calcStats(periodTrades)
 
   const PERIOD_LABELS: Record<PeriodKey, string> = {
+    hoy: "Hoy",
+    semana: "Esta semana",
     mes: "Este mes",
     anio: "Este año",
     todo: "Total",
+    custom: "Período personalizado",
   }
 
   return (
@@ -375,12 +365,11 @@ export default function PanelPage() {
             Main account · IBKR Flex Query
           </p>
         </div>
-        <div style={{ display: "flex", gap: "0.375rem", alignItems: "center" }}>
-          <span style={{ fontSize: "0.6875rem", color: "var(--text-muted)", marginRight: "0.25rem" }}>PERÍODO</span>
-          <PeriodBtn label="Mes" active={period === "mes"} onClick={() => setPeriod("mes")} />
-          <PeriodBtn label="Este año" active={period === "anio"} onClick={() => setPeriod("anio")} />
-          <PeriodBtn label="Total" active={period === "todo"} onClick={() => setPeriod("todo")} />
-        </div>
+        <PeriodSelector
+          period={period}
+          customRange={customRange}
+          onChange={(p, range) => { setPeriod(p); if (range) setCustomRange(range) }}
+        />
       </div>
 
       {/* Row 1: 4-col KPI grid */}

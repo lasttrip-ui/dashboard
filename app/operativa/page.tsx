@@ -12,9 +12,12 @@ import TradesTable from "@/components/TradesTable"
 import IBFlexImport from "@/components/lab/IBFlexImport"
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
+  hoy: "HOY",
+  semana: "ESTA SEMANA",
   mes: "ESTE MES",
   anio: "ESTE AÑO",
   todo: "TOTAL",
+  custom: "PERSONALIZADO",
 }
 
 const PERIODS: { key: PeriodKey; label: string }[] = [

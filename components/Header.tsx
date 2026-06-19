@@ -11,9 +11,12 @@ interface HeaderProps {
 }
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
+  hoy: "Hoy",
+  semana: "Esta semana",
   mes: "Este mes",
   anio: "Este año",
   todo: "Todo",
+  custom: "Personalizado",
 }
 
 export default function Header({ theme, onThemeToggle, period, onPeriodChange }: HeaderProps) {

@@ -225,11 +225,26 @@ export function getTickerStats(tradesToAnalyze: OptionTrade[]): TickerStat[] {
 
 // ── Filter helpers ────────────────────────────────────────────────────────
 
-export type PeriodKey = "mes" | "anio" | "todo"
+export type PeriodKey = "hoy" | "semana" | "mes" | "anio" | "todo" | "custom"
 
 export function filterByPeriod(allTrades: OptionTrade[], period: PeriodKey): OptionTrade[] {
-  if (period === "todo") return allTrades
+  if (period === "todo" || period === "custom") return allTrades
   const [ty, tm] = TODAY.split("-").map(Number)
+
+  if (period === "hoy") {
+    return allTrades.filter(t => t.date === TODAY)
+  }
+
+  if (period === "semana") {
+    const today = parseDate(TODAY)
+    const startDow = today.getDay() // 0=Sun
+    const offset = startDow === 0 ? -6 : 1 - startDow
+    const start = new Date(today)
+    start.setDate(start.getDate() + offset)
+    const startStr = dateToString(start)
+    return allTrades.filter(t => t.date >= startStr && t.date <= TODAY)
+  }
+
   if (period === "mes") {
     return allTrades.filter(t => {
       const [ry, rm] = t.date.split("-").map(Number)
@@ -238,6 +253,10 @@ export function filterByPeriod(allTrades: OptionTrade[], period: PeriodKey): Opt
   }
   // anio
   return allTrades.filter(t => t.date.startsWith(String(ty)))
+}
+
+export function filterByDateRange(allTrades: OptionTrade[], from: string, to: string): OptionTrade[] {
+  return allTrades.filter(t => t.date >= from && t.date <= to)
 }
 
 export function filterByMonth(allTrades: OptionTrade[], year: number, month: number): OptionTrade[] {
