@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import type { OptionTrade } from "@/lib/data"
-import { loadImported, saveImported } from "@/lib/trade-store"
-import { TODAY } from "@/lib/utils"
+import { loadImported, saveImported, saveOverride } from "@/lib/trade-store"
+import { TODAY, STRATEGY_OPTIONS, inferStrategy } from "@/lib/utils"
 
 interface AddTradeModalProps {
   onClose: () => void
   onSaved: () => void
+  editingTrade?: OptionTrade
 }
 
 const inputStyle: React.CSSProperties = {
@@ -29,16 +30,18 @@ const labelStyle: React.CSSProperties = {
   display: "block",
 }
 
-export default function AddTradeModal({ onClose, onSaved }: AddTradeModalProps) {
-  const [date, setDate] = useState(TODAY)
-  const [ticker, setTicker] = useState("")
-  const [type, setType] = useState<"Put" | "Call">("Put")
-  const [qty, setQty] = useState("1")
-  const [premium, setPremium] = useState("")
-  const [expiration, setExpiration] = useState("")
-  const [status, setStatus] = useState<"open" | "closed">("open")
-  const [currentPrice, setCurrentPrice] = useState("")
-  const [closePrice, setClosePrice] = useState("")
+export default function AddTradeModal({ onClose, onSaved, editingTrade }: AddTradeModalProps) {
+  const isEdit = !!editingTrade
+  const [date, setDate] = useState(editingTrade?.date ?? TODAY)
+  const [ticker, setTicker] = useState(editingTrade?.ticker ?? "")
+  const [type, setType] = useState<"Put" | "Call">(editingTrade?.type ?? "Put")
+  const [qty, setQty] = useState(String(editingTrade?.qty ?? 1))
+  const [premium, setPremium] = useState(editingTrade ? String(editingTrade.premium) : "")
+  const [expiration, setExpiration] = useState(editingTrade?.expiration ?? "")
+  const [status, setStatus] = useState<"open" | "closed">(editingTrade?.status ?? "open")
+  const [currentPrice, setCurrentPrice] = useState(editingTrade ? String(editingTrade.currentPrice) : "")
+  const [closePrice, setClosePrice] = useState(editingTrade?.closePrice !== undefined ? String(editingTrade.closePrice) : "")
+  const [strategy, setStrategy] = useState(editingTrade ? inferStrategy(editingTrade) : "Short Put")
   const [error, setError] = useState("")
 
   function handleSave() {
@@ -47,8 +50,7 @@ export default function AddTradeModal({ onClose, onSaved }: AddTradeModalProps) 
       return
     }
     const dteTotalAtOpen = Math.max(0, Math.round((new Date(expiration).getTime() - new Date(date).getTime()) / 86_400_000))
-    const trade: OptionTrade = {
-      id: `manual_${Date.now()}`,
+    const patch: Partial<OptionTrade> = {
       date,
       ticker: ticker.trim().toUpperCase(),
       type,
@@ -59,12 +61,19 @@ export default function AddTradeModal({ onClose, onSaved }: AddTradeModalProps) 
       dteTotalAtOpen,
       currentPrice: status === "open" ? (parseFloat(currentPrice) || 0) : 0,
       status,
-      ...(status === "closed" ? { closePrice: parseFloat(closePrice) || 0 } : {}),
+      strategy,
+      ...(status === "closed" ? { closePrice: parseFloat(closePrice) || 0 } : { closePrice: undefined }),
     }
-    const existing = loadImported()
-    saveImported([...existing, trade])
+
+    if (isEdit && editingTrade) {
+      saveOverride(editingTrade.id, patch)
+    } else {
+      const trade: OptionTrade = { id: `manual_${Date.now()}`, ...patch } as OptionTrade
+      const existing = loadImported()
+      saveImported([...existing, trade])
+    }
     // useAllTrades only listens for cross-tab storage events; dispatch one manually so this tab updates too
-    window.dispatchEvent(new StorageEvent("storage", { key: "tt-imported-trades" }))
+    window.dispatchEvent(new StorageEvent("storage", { key: isEdit ? "tt-trade-overrides" : "tt-imported-trades" }))
     onSaved()
     onClose()
   }
@@ -83,7 +92,7 @@ export default function AddTradeModal({ onClose, onSaved }: AddTradeModalProps) 
         style={{ width: "420px", maxWidth: "92vw", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "0.875rem" }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: "0.9375rem", fontWeight: 700 }}>Nueva operación</span>
+          <span style={{ fontSize: "0.9375rem", fontWeight: 700 }}>{isEdit ? "Editar operación" : "Nueva operación"}</span>
           <button onClick={onClose} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: "1.125rem" }}>✕</button>
         </div>
 
@@ -114,6 +123,12 @@ export default function AddTradeModal({ onClose, onSaved }: AddTradeModalProps) 
           <div>
             <label style={labelStyle}>Vencimiento</label>
             <input type="date" value={expiration} onChange={e => setExpiration(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Estrategia</label>
+            <select value={strategy} onChange={e => setStrategy(e.target.value)} style={inputStyle}>
+              {STRATEGY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
           <div>
             <label style={labelStyle}>Estado</label>

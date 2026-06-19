@@ -6,6 +6,7 @@ import { calcStats, filterByMonth, MONTH_NAMES_ES } from "@/lib/utils"
 import TradesTable from "@/components/TradesTable"
 import AddTradeModal from "@/components/AddTradeModal"
 import { TODAY } from "@/lib/utils"
+import type { OptionTrade } from "@/lib/data"
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -28,6 +29,7 @@ export default function OperacionesPage() {
   const [viewYear, setViewYear] = useState(ty)
   const [viewMonth, setViewMonth] = useState(tm)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingTrade, setEditingTrade] = useState<OptionTrade | undefined>(undefined)
 
   const monthTrades = filterByMonth(trades, viewYear, viewMonth)
   const stats = calcStats(monthTrades)
@@ -83,10 +85,15 @@ export default function OperacionesPage() {
         viewYear={viewYear}
         viewMonth={viewMonth}
         onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
+        onEdit={trade => setEditingTrade(trade)}
       />
 
-      {showAddModal && (
-        <AddTradeModal onClose={() => setShowAddModal(false)} onSaved={() => {}} />
+      {(showAddModal || editingTrade) && (
+        <AddTradeModal
+          editingTrade={editingTrade}
+          onClose={() => { setShowAddModal(false); setEditingTrade(undefined) }}
+          onSaved={() => {}}
+        />
       )}
     </div>
   )

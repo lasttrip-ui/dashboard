@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react"
 import { OptionTrade } from "@/lib/data"
+import { Pencil, Trash2 } from "lucide-react"
 import {
   filterByMonth,
   dteRemaining,
@@ -11,7 +12,10 @@ import {
   realizedPnl,
   fmtDollar,
   MONTH_NAMES_ES,
+  inferStrategy,
+  STRATEGY_COLORS,
 } from "@/lib/utils"
+import { markDeleted } from "@/lib/trade-store"
 
 type StatusFilter = "todos" | "abiertos" | "cerrados"
 type StrategyFilter = "todos" | "Put" | "Call"
@@ -22,6 +26,7 @@ interface TradesTableProps {
   viewYear: number
   viewMonth: number
   onMonthChange: (year: number, month: number) => void
+  onEdit?: (trade: OptionTrade) => void
 }
 
 const navBtnStyle: React.CSSProperties = {
@@ -35,7 +40,7 @@ const navBtnStyle: React.CSSProperties = {
   lineHeight: 1.5,
 }
 
-export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange }: TradesTableProps) {
+export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange, onEdit }: TradesTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos")
   const [tickerFilter, setTickerFilter] = useState<string>("todos")
   const [strategyFilter, setStrategyFilter] = useState<StrategyFilter>("todos")
@@ -155,7 +160,7 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
               fontWeight: strategyFilter !== "todos" ? 600 : 400,
             }}
           >
-            {strategyFilter === "todos" ? "Estrategia ▼" : `${strategyFilter} ▼`}
+            {strategyFilter === "todos" ? "Tipo ▼" : `${strategyFilter} ▼`}
           </button>
           {strategyOpen && (
             <div
@@ -262,8 +267,10 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
               <th>TICKER</th>
               <th>TIPO</th>
               <th>ACCIÓN</th>
+              <th>ESTRATEGIA</th>
               <th style={{ textAlign: "right" }}>QTY</th>
               <th style={{ textAlign: "right" }}>PRECIO</th>
+              <th style={{ textAlign: "right" }}>COM.</th>
               <th style={{ minWidth: "130px" }}>DTE RESTANTE</th>
               <th
                 className="sortable"
@@ -274,17 +281,30 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
               </th>
               <th style={{ textAlign: "right" }}>NO REALIZADO</th>
               <th style={{ textAlign: "right" }}>REALIZADO</th>
+              <th style={{ textAlign: "center" }}>ACCIONES</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
+                <td colSpan={13} style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>
                   Sin trades para este período
                 </td>
               </tr>
             ) : (
-              filtered.map(trade => <TradeRow key={trade.id} trade={trade} />)
+              filtered.map(trade => (
+                <TradeRow
+                  key={trade.id}
+                  trade={trade}
+                  onEdit={onEdit}
+                  onDelete={() => {
+                    if (confirm(`¿Eliminar la operación de ${trade.ticker}?`)) {
+                      markDeleted(trade.id)
+                      window.dispatchEvent(new StorageEvent("storage", { key: "tt-deleted-trade-ids" }))
+                    }
+                  }}
+                />
+              ))
             )}
           </tbody>
         </table>
@@ -308,12 +328,13 @@ function tickerItemStyle(active: boolean): React.CSSProperties {
   }
 }
 
-function TradeRow({ trade }: { trade: OptionTrade }) {
+function TradeRow({ trade, onEdit, onDelete }: { trade: OptionTrade; onEdit?: (t: OptionTrade) => void; onDelete?: () => void }) {
   const dte = dteRemaining(trade.expiration)
   const dteProg = dteProgress(trade)
   const pctCap = pctPrimaCap(trade)
   const unreal = unrealizedPnl(trade)
   const real = realizedPnl(trade)
+  const strategy = inferStrategy(trade)
 
   // Expiry display
   const expShort = trade.expiration.replace("2026-", "26-")
@@ -322,6 +343,11 @@ function TradeRow({ trade }: { trade: OptionTrade }) {
   const currentOptPrice = trade.status === "closed"
     ? (trade.closePrice !== undefined ? trade.closePrice : 0)
     : trade.currentPrice
+
+  const accionLabel = trade.status === "open"
+    ? "Venta de apertura"
+    : (trade.closePrice ?? 0) > 0 ? "Compra de cierre" : "Expirada"
+  const accionColor = trade.status === "open" ? "var(--orange)" : (trade.closePrice ?? 0) > 0 ? "var(--green)" : "var(--text-muted)"
 
   return (
     <tr>
@@ -347,13 +373,24 @@ function TradeRow({ trade }: { trade: OptionTrade }) {
       </td>
 
       {/* ACCIÓN */}
-      <td style={{ color: "var(--text-muted)", fontSize: "0.75rem", letterSpacing: "0.04em" }}>SELL</td>
+      <td style={{ color: accionColor, fontSize: "0.75rem", letterSpacing: "0.02em", fontWeight: 600, whiteSpace: "nowrap" }}>{accionLabel}</td>
+
+      {/* ESTRATEGIA */}
+      <td style={{ whiteSpace: "nowrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.375rem", fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: STRATEGY_COLORS[strategy] ?? "var(--text-muted)", flexShrink: 0 }} />
+          {strategy}
+        </span>
+      </td>
 
       {/* QTY */}
       <td style={{ textAlign: "right", fontWeight: 500 }} className="num">{trade.qty}</td>
 
       {/* PRECIO */}
       <td style={{ textAlign: "right", fontWeight: 500 }} className="num">${trade.premium.toFixed(2)}</td>
+
+      {/* COMISIÓN */}
+      <td style={{ textAlign: "right", color: "var(--text-muted)" }} className="num">—</td>
 
       {/* DTE RESTANTE */}
       <td>
@@ -430,6 +467,26 @@ function TradeRow({ trade }: { trade: OptionTrade }) {
         ) : (
           <span style={{ color: "var(--text-muted)" }}>—</span>
         )}
+      </td>
+
+      {/* ACCIONES */}
+      <td style={{ textAlign: "center" }}>
+        <div style={{ display: "flex", gap: "0.375rem", justifyContent: "center" }}>
+          <button
+            onClick={() => onEdit?.(trade)}
+            title="Editar"
+            style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "0.2rem", display: "flex" }}
+          >
+            <Pencil size={14} strokeWidth={1.8} />
+          </button>
+          <button
+            onClick={onDelete}
+            title="Eliminar"
+            style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "0.2rem", display: "flex" }}
+          >
+            <Trash2 size={14} strokeWidth={1.8} />
+          </button>
+        </div>
       </td>
     </tr>
   )

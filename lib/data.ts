@@ -14,6 +14,7 @@ export interface OptionTrade {
   currentPrice: number
   closePrice?: number
   status: "open" | "closed"
+  strategy?: string
 }
 
 export const trades: OptionTrade[] = [

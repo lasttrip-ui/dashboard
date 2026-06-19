@@ -26,6 +26,51 @@ export function mergeImported(base: OptionTrade[], imported: OptionTrade[]): Opt
   return [...base, ...unique].sort((a, b) => a.date.localeCompare(b.date))
 }
 
+// ── Per-trade edits/deletions (works on top of base + imported trades) ───────
+
+const OVERRIDES_KEY = "tt-trade-overrides"
+const DELETED_KEY = "tt-deleted-trade-ids"
+
+export function loadOverrides(): Record<string, Partial<OptionTrade>> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = localStorage.getItem(OVERRIDES_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveOverride(id: string, patch: Partial<OptionTrade>): void {
+  const all = loadOverrides()
+  all[id] = { ...all[id], ...patch }
+  localStorage.setItem(OVERRIDES_KEY, JSON.stringify(all))
+}
+
+export function loadDeletedIds(): string[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(DELETED_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+export function markDeleted(id: string): void {
+  const ids = new Set(loadDeletedIds())
+  ids.add(id)
+  localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(ids)))
+}
+
+export function applyOverridesAndDeletions(trades: OptionTrade[]): OptionTrade[] {
+  const overrides = loadOverrides()
+  const deleted = new Set(loadDeletedIds())
+  return trades
+    .filter(t => !deleted.has(t.id))
+    .map(t => overrides[t.id] ? { ...t, ...overrides[t.id] } : t)
+}
+
 // ── Imported raw executions (stocks + options, any year) ─────────────────────
 
 import type { ImportedExecution } from "./import-parser"

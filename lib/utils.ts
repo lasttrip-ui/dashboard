@@ -73,6 +73,48 @@ export function tradePnl(trade: OptionTrade): number {
   return unrealizedPnl(trade)
 }
 
+// ── Strategy taxonomy ────────────────────────────────────────────────────────
+
+export const STRATEGY_OPTIONS = [
+  "Short Put",
+  "Short Call",
+  "Long Call",
+  "Long Put",
+  "Covered Call",
+  "Bull Put Spread",
+  "Bear Call Spread",
+  "Bull Call Spread",
+  "Bear Put Spread",
+  "Iron Condor",
+  "Diagonal",
+  "LEAP",
+  "STK",
+  "FX",
+] as const
+
+export const STRATEGY_COLORS: Record<string, string> = {
+  "Short Put": "var(--green)",
+  "Short Call": "var(--green)",
+  "Long Call": "var(--accent)",
+  "Long Put": "var(--accent)",
+  "Covered Call": "var(--purple)",
+  "Bull Put Spread": "var(--purple)",
+  "Bear Call Spread": "var(--purple)",
+  "Bull Call Spread": "var(--purple)",
+  "Bear Put Spread": "var(--purple)",
+  "Iron Condor": "var(--purple)",
+  "Diagonal": "var(--orange)",
+  "LEAP": "var(--orange)",
+  "STK": "var(--orange)",
+  "FX": "var(--orange)",
+}
+
+/** Default strategy guess for trades that don't have one explicitly assigned */
+export function inferStrategy(trade: OptionTrade): string {
+  if (trade.strategy) return trade.strategy
+  return trade.type === "Put" ? "Short Put" : "Short Call"
+}
+
 // ── Aggregate calculations ──────────────────────────────────────────────────
 
 export type TradeOutcome = "W" | "BE" | "L"
