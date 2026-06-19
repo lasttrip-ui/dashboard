@@ -17,8 +17,9 @@ import {
 import { loadImportedDividends } from "@/lib/trade-store"
 import type { ImportedDividend } from "@/lib/import-parser"
 import type { DividendEntry } from "@/lib/dividends"
-import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
+import type { IBKRSnapshot, Position, Balance } from "@/components/portfolio/types"
 import { useLiveQuotes } from "@/hooks/use-live-quotes"
+import { dteRemaining } from "@/lib/utils"
 
 const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
@@ -26,30 +27,85 @@ type Tab = "cartera" | "posiciones" | "mapa" | "dividendos"
 
 // ── Positions sub-tab ────────────────────────────────────────────────────────
 
-function PositionesTab({ positions }: { positions: Position[] }) {
-  const stocks = positions.filter(p => p.assetClass === "STK")
-  const options = positions.filter(p => p.assetClass === "OPT")
-  const [view, setView] = useState<"STK" | "OPT">("STK")
+type PositionFilter = "todas" | "largas" | "cortas" | "efectivo"
+type PosSortKey = "value" | "pnl" | "pctPnl"
+
+function strategyForPosition(p: Position): string {
+  if (p.assetClass === "STK") return p.position > 0 ? "Long" : "Short"
+  const dir = p.position > 0 ? "Long" : "Short"
+  const type = p.optionType === "P" ? "Put" : "Call"
+  return `${dir} ${type}`
+}
+
+function PositionesTab({ positions, balances }: { positions: Position[]; balances: Balance[] }) {
+  const [filter, setFilter] = useState<PositionFilter>("todas")
+  const [sortKey, setSortKey] = useState<PosSortKey>("value")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const { live, lastUpdate } = useLiveQuotes(positions)
 
   function fmt(n: number, d = 2) {
     return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
   }
 
-  const list = view === "STK" ? stocks : options
+  function toggleSort(key: PosSortKey) {
+    if (key === sortKey) setSortDir(d => d === "desc" ? "asc" : "desc")
+    else { setSortKey(key); setSortDir("desc") }
+  }
+
+  const portfolioTotal = positions.reduce((s, p) => s + Math.abs(p.marketValue), 0)
+
+  const filtered = useMemo(() => {
+    let result = [...positions]
+    if (filter === "largas") result = result.filter(p => p.position > 0)
+    else if (filter === "cortas") result = result.filter(p => p.position < 0)
+
+    result.sort((a, b) => {
+      const va = live.get(a.contractId)?.marketValue ?? a.marketValue
+      const vb = live.get(b.contractId)?.marketValue ?? b.marketValue
+      const pa = live.get(a.contractId)?.unrealizedPnl ?? a.unrealizedPnl
+      const pb = live.get(b.contractId)?.unrealizedPnl ?? b.unrealizedPnl
+      const costA = va - pa, costB = vb - pb
+      const pctA = costA !== 0 ? (pa / Math.abs(costA)) * 100 : 0
+      const pctB = costB !== 0 ? (pb / Math.abs(costB)) * 100 : 0
+      let diff = 0
+      if (sortKey === "value") diff = Math.abs(va) - Math.abs(vb)
+      else if (sortKey === "pnl") diff = pa - pb
+      else diff = pctA - pctB
+      return sortDir === "desc" ? -diff : diff
+    })
+    return result
+  }, [positions, filter, sortKey, sortDir, live])
+
+  const stats = {
+    count: filtered.length,
+    value: filtered.reduce((s, p) => s + Math.abs(live.get(p.contractId)?.marketValue ?? p.marketValue), 0),
+  }
+
+  const tabs: { key: PositionFilter; label: string }[] = [
+    { key: "todas", label: "Todas" },
+    { key: "largas", label: "Largas" },
+    { key: "cortas", label: "Cortas" },
+    { key: "efectivo", label: "Efectivo" },
+  ]
+
+  const sortArrow = (key: PosSortKey) => sortKey === key ? (sortDir === "desc" ? " ↓" : " ↑") : ""
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-        {(["STK", "OPT"] as const).map(t => (
-          <button key={t} onClick={() => setView(t)} style={{
-            padding: "0.3rem 0.875rem", borderRadius: 6, border: "none", cursor: "pointer",
-            background: view === t ? "var(--accent)" : "var(--bg-hover)",
-            color: view === t ? "#fff" : "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: view === t ? 600 : 400,
-          }}>
-            {t === "STK" ? `Acciones (${stocks.length})` : `Opciones (${options.length})`}
-          </button>
-        ))}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "2px", background: "var(--bg-primary)", borderRadius: "8px", padding: "2px" }}>
+          {tabs.map(t => (
+            <button key={t.key} onClick={() => setFilter(t.key)} style={{
+              padding: "0.3rem 0.875rem", borderRadius: 6, border: "none", cursor: "pointer",
+              background: filter === t.key ? "var(--bg-card)" : "transparent",
+              color: filter === t.key ? "var(--text-primary)" : "var(--text-muted)",
+              fontSize: "0.8125rem", fontWeight: filter === t.key ? 600 : 400,
+              boxShadow: filter === t.key ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+            }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
         {lastUpdate && (
           <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.6875rem", color: "var(--text-muted)" }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", animation: "pulse 2s infinite" }} />
@@ -57,48 +113,103 @@ function PositionesTab({ positions }: { positions: Position[] }) {
           </span>
         )}
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table className="tt-table">
-          <thead>
-            <tr>
-              <th>Símbolo</th>
-              <th>Pos</th>
-              <th>Precio Medio</th>
-              <th>Último</th>
-              <th>CCY</th>
-              <th>Valor</th>
-              <th>P&L No Real.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map(p => {
-              const ccy = p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : p.currency === "HKD" ? "HK$" : "$"
-              const lq = live.get(p.contractId)
-              const price = lq?.price ?? p.marketPrice
-              const value = lq?.marketValue ?? p.marketValue
-              const upnl = lq?.unrealizedPnl ?? p.unrealizedPnl
-              return (
-                <tr key={p.contractId}>
-                  <td style={{ fontWeight: 600 }}>{p.symbol}</td>
-                  <td className="num" style={{ color: p.position > 0 ? "var(--green)" : "var(--red)" }}>
-                    {p.position > 0 ? "+" : ""}{p.position}
-                  </td>
-                  <td className="num">{ccy}{fmt(p.averagePrice)}</td>
-                  <td className="num" style={lq ? { color: "var(--text-primary)", fontWeight: 600 } : undefined}>
-                    {ccy}{fmt(price)}
-                    {lq && <span style={{ color: "var(--green)", fontSize: "0.5625rem", marginLeft: 3, verticalAlign: "super" }}>●</span>}
-                  </td>
-                  <td style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>{p.currency}</td>
-                  <td className="num">{ccy}{fmt(Math.abs(value))}</td>
-                  <td className="num" style={{ color: upnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 500 }}>
-                    {upnl >= 0 ? "+" : "-"}{ccy}{fmt(Math.abs(upnl))}
-                  </td>
+
+      {filter !== "efectivo" && (
+        <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <span>POSICIONES <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>{stats.count}</span></span>
+          <span>VALOR DE MERCADO TOTAL <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>${fmt(stats.value)}</span></span>
+        </div>
+      )}
+
+      {filter === "efectivo" ? (
+        <div style={{ overflowX: "auto" }}>
+          <table className="tt-table">
+            <thead>
+              <tr>
+                <th>Moneda</th>
+                <th>Efectivo</th>
+                <th>Valor Neto Liquidación</th>
+              </tr>
+            </thead>
+            <tbody>
+              {balances.filter(b => b.currency !== "BASE").map(b => (
+                <tr key={b.currency}>
+                  <td style={{ fontWeight: 600 }}>{b.currency}</td>
+                  <td className="num">{fmt(b.cashBalance)}</td>
+                  <td className="num">{fmt(b.netLiquidationValue)}</td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="tt-table">
+            <thead>
+              <tr>
+                <th>Símbolo</th>
+                <th>Tipo</th>
+                <th>Estrategia</th>
+                <th style={{ textAlign: "right" }}>Cant.</th>
+                <th style={{ textAlign: "right" }}>Coste Medio</th>
+                <th style={{ textAlign: "right" }}>Precio Mdo.</th>
+                <th style={{ textAlign: "right" }}>DTE</th>
+                <th className="sortable" style={{ textAlign: "right" }} onClick={() => toggleSort("value")}>Valor de Mercado{sortArrow("value")}</th>
+                <th className="sortable" style={{ textAlign: "right" }} onClick={() => toggleSort("pnl")}>P&L No Realizado{sortArrow("pnl")}</th>
+                <th className="sortable" style={{ textAlign: "right" }} onClick={() => toggleSort("pctPnl")}>% No Realiz.{sortArrow("pctPnl")}</th>
+                <th style={{ textAlign: "right" }}>% Cartera</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(p => {
+                const ccy = p.currency === "EUR" ? "€" : p.currency === "GBP" ? "£" : p.currency === "HKD" ? "HK$" : "$"
+                const lq = live.get(p.contractId)
+                const price = lq?.price ?? p.marketPrice
+                const value = lq?.marketValue ?? p.marketValue
+                const upnl = lq?.unrealizedPnl ?? p.unrealizedPnl
+                const cost = value - upnl
+                const pctPnl = cost !== 0 ? (upnl / Math.abs(cost)) * 100 : 0
+                const pctCartera = portfolioTotal > 0 ? (Math.abs(value) / portfolioTotal) * 100 : 0
+                const dte = p.assetClass === "OPT" && p.expiration ? dteRemaining(p.expiration) : null
+                return (
+                  <tr key={p.contractId}>
+                    <td style={{ fontWeight: 600 }}>{p.symbol}</td>
+                    <td>
+                      <span style={{
+                        padding: "0.125rem 0.5rem", borderRadius: 5, fontSize: "0.75rem", fontWeight: 600,
+                        background: p.assetClass === "OPT" ? (p.optionType === "P" ? "var(--purple-dim)" : "var(--accent-dim)") : "var(--bg-hover)",
+                        color: p.assetClass === "OPT" ? (p.optionType === "P" ? "var(--purple)" : "var(--accent)") : "var(--text-secondary)",
+                      }}>
+                        {p.assetClass === "OPT" ? (p.optionType === "P" ? "Put" : "Call") : "STK"}
+                      </span>
+                    </td>
+                    <td style={{ color: p.position > 0 ? "var(--green)" : "var(--red)", fontSize: "0.8125rem", fontWeight: 600 }}>
+                      {strategyForPosition(p)}
+                    </td>
+                    <td className="num" style={{ textAlign: "right", color: p.position > 0 ? "var(--green)" : "var(--red)" }}>
+                      {p.position > 0 ? "+" : ""}{p.position}
+                    </td>
+                    <td className="num" style={{ textAlign: "right" }}>{ccy}{fmt(p.averagePrice)}</td>
+                    <td className="num" style={{ textAlign: "right" }}>
+                      {ccy}{fmt(price)}
+                      {lq && <span style={{ color: "var(--green)", fontSize: "0.5625rem", marginLeft: 3, verticalAlign: "super" }}>●</span>}
+                    </td>
+                    <td className="num" style={{ textAlign: "right", color: "var(--text-muted)" }}>{dte !== null ? `${dte}d` : "—"}</td>
+                    <td className="num" style={{ textAlign: "right" }}>{ccy}{fmt(Math.abs(value))}</td>
+                    <td className="num" style={{ textAlign: "right", color: upnl >= 0 ? "var(--green)" : "var(--red)", fontWeight: 500 }}>
+                      {upnl >= 0 ? "+" : "-"}{ccy}{fmt(Math.abs(upnl))}
+                    </td>
+                    <td className="num" style={{ textAlign: "right", color: pctPnl >= 0 ? "var(--green)" : "var(--red)" }}>
+                      {pctPnl >= 0 ? "+" : ""}{pctPnl.toFixed(1)}%
+                    </td>
+                    <td className="num" style={{ textAlign: "right", color: "var(--text-secondary)" }}>{pctCartera.toFixed(1)}%</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
@@ -494,7 +605,7 @@ export default function CarteraPage() {
 
       {/* Content */}
       {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} />}
-      {tab === "posiciones" && <PositionesTab positions={snapshot?.positions ?? []} />}
+      {tab === "posiciones" && <PositionesTab positions={snapshot?.positions ?? []} balances={snapshot?.balances ?? []} />}
       {tab === "mapa"       && <HeatmapTab positions={snapshot?.positions ?? []} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>
