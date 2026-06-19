@@ -303,114 +303,108 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
       </div>
 
       {/* Day detail panel */}
-      {selectedDay && (
-        <div style={{
-          marginTop: "0.75rem",
-          padding: "0.875rem 1rem",
-          background: "var(--bg-primary)",
-          border: "1px solid var(--border)",
-          borderRadius: "10px",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.625rem" }}>
-            <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--text-primary)" }}>
-              Movimientos del {selectedDay.split("-").reverse().join("/")}
-              {selectedExecs.length > 0 && (() => {
-                const total = selectedExecs.reduce((s, e) => s + e.realizedPnl, 0)
-                return (
-                  <span style={{ marginLeft: "0.75rem", fontWeight: 700, color: total > 0 ? "var(--green)" : total < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
-                    {total >= 0 ? "+" : ""}${total.toFixed(2)} realizado
-                  </span>
-                )
-              })()}
-            </span>
-            <button onClick={() => setSelectedDay(null)} style={{
-              background: "transparent", border: "none", color: "var(--text-muted)",
-              cursor: "pointer", fontSize: "1rem", lineHeight: 1, padding: "0.125rem 0.375rem",
-            }}>✕</button>
-          </div>
+      {selectedDay && (() => {
+        const [dy, dm, dd2] = selectedDay.split("-").map(Number)
+        const dateLabel = `${dd2} ${MONTH_NAMES_ES[dm - 1]} ${dy}`
+        const openRows = selectedTrades.filter(t => t.status === "open")
+        const closedOptionRows = selectedTrades.filter(t => t.status === "closed")
+        const totalPnl = openRows.reduce((s, t) => s + tradePnl(t), 0)
+          + closedOptionRows.reduce((s, t) => s + tradePnl(t), 0)
+          + selectedExecs.reduce((s, e) => s + e.realizedPnl, 0)
+        const closedCount = closedOptionRows.length + selectedExecs.length
 
-          {selectedTrades.length === 0 && selectedExecs.length === 0 && (
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>Sin movimientos este día.</div>
-          )}
+        return (
+          <div style={{
+            marginTop: "0.75rem",
+            padding: "1rem 1.125rem",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--border)",
+            borderRadius: "10px",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
+              <div>
+                <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                  Operaciones del día
+                </div>
+                <div style={{ fontSize: "1.0625rem", fontWeight: 800, color: "var(--text-primary)", marginTop: 2 }}>
+                  {dateLabel}
+                </div>
+              </div>
+              <button onClick={() => setSelectedDay(null)} style={{
+                background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: "8px", color: "var(--text-muted)",
+                cursor: "pointer", fontSize: "0.875rem", lineHeight: 1, padding: "0.375rem 0.5rem",
+              }}>✕</button>
+            </div>
 
-          {selectedTrades.length > 0 && (
-            <div style={{ marginBottom: selectedExecs.length > 0 ? "0.875rem" : 0 }}>
+            {/* Stats row */}
+            <div style={{ display: "flex", gap: "1.25rem", marginBottom: "0.875rem", fontSize: "0.8125rem" }}>
+              <span style={{ color: "var(--text-secondary)" }}>Abiertos <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{openRows.length}</span></span>
+              <span style={{ color: "var(--text-secondary)" }}>Cerrados <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{closedCount}</span></span>
+              <span className="num" style={{ fontWeight: 700, color: totalPnl > 0 ? "var(--green)" : totalPnl < 0 ? "var(--red)" : "var(--text-muted)" }}>
+                {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+              </span>
+            </div>
+
+            {/* Operaciones abiertas */}
+            <div style={{ marginBottom: "0.875rem" }}>
               <div style={{ fontSize: "0.625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>
-                Operaciones de opciones
+                Operaciones abiertas
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
-                <thead>
-                  <tr>
-                    {["Ticker", "Tipo", "Cant.", "Prima", "Cierre", "Estado", "P&L"].map(h => (
-                      <th key={h} style={{ textAlign: h === "P&L" ? "right" : "left", padding: "0.2rem 0.4rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.625rem", textTransform: "uppercase", borderBottom: "1px solid var(--border-subtle)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedTrades.map(t => {
-                    const pnl = tradePnl(t)
-                    return (
-                      <tr key={t.id}>
-                        <td style={{ padding: "0.25rem 0.4rem", fontWeight: 700, color: "var(--text-primary)" }}>{t.ticker}</td>
-                        <td style={{ padding: "0.25rem 0.4rem", color: t.type === "Put" ? "var(--red)" : "var(--green)", fontWeight: 600 }}>
-                          {t.type.toUpperCase()}
-                        </td>
-                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{t.qty}</td>
-                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${t.premium.toFixed(2)}</td>
-                        <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">
-                          {t.status === "closed" ? `$${(t.closePrice ?? 0).toFixed(2)}` : "—"}
-                        </td>
-                        <td style={{ padding: "0.25rem 0.4rem", color: t.status === "open" ? "var(--accent)" : "var(--text-muted)", fontSize: "0.6875rem" }}>
-                          {t.status === "open" ? "Abierta" : "Cerrada"}
-                        </td>
-                        <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: pnl > 0 ? "var(--green)" : pnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
-                          {pnl >= 0 ? "+" : ""}${pnl.toFixed(0)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              {openRows.length === 0 ? (
+                <div style={{ border: "1px dashed var(--border)", borderRadius: "8px", padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Sin aperturas este día.
+                </div>
+              ) : (
+                <DayDetailTable rows={openRows.map(t => ({
+                  key: t.id,
+                  symbol: t.ticker,
+                  type: t.type,
+                  action: "SELL" as const,
+                  qty: t.qty,
+                  price: t.premium,
+                  commission: undefined,
+                  pnl: tradePnl(t),
+                }))} />
+              )}
             </div>
-          )}
 
-          {selectedExecs.length > 0 && (
+            {/* Operaciones cerradas */}
             <div>
-              <div style={{ fontSize: "0.625rem", color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>
-                Ejecuciones reales IBKR
+              <div style={{ fontSize: "0.625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.375rem" }}>
+                Operaciones cerradas
               </div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
-                <thead>
-                  <tr>
-                    {["Hora", "Símbolo", "Tipo", "Lado", "Cant.", "Precio", "P&L realizado"].map(h => (
-                      <th key={h} style={{ textAlign: h.startsWith("P&L") ? "right" : "left", padding: "0.2rem 0.4rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.625rem", textTransform: "uppercase", borderBottom: "1px solid var(--border-subtle)" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedExecs.map(e => (
-                    <tr key={e.tradeId}>
-                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-muted)", fontFamily: "monospace", fontSize: "0.6875rem" }}>
-                        {e.tradeTime.slice(11, 16)}
-                      </td>
-                      <td style={{ padding: "0.25rem 0.4rem", fontWeight: 700, color: "var(--text-primary)" }}>{e.symbol}</td>
-                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)", fontSize: "0.6875rem" }}>{e.secType}</td>
-                      <td style={{ padding: "0.25rem 0.4rem", fontWeight: 600, color: e.side === "SELL" ? "var(--red)" : "var(--green)" }}>
-                        {e.side}
-                      </td>
-                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{e.size}</td>
-                      <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${e.price.toFixed(2)}</td>
-                      <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: e.realizedPnl > 0 ? "var(--green)" : e.realizedPnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
-                        {e.realizedPnl !== 0 ? `${e.realizedPnl >= 0 ? "+" : ""}$${e.realizedPnl.toFixed(0)}` : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {closedCount === 0 ? (
+                <div style={{ border: "1px dashed var(--border)", borderRadius: "8px", padding: "0.75rem", textAlign: "center", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  Sin cierres este día.
+                </div>
+              ) : (
+                <DayDetailTable rows={[
+                  ...closedOptionRows.map(t => ({
+                    key: t.id,
+                    symbol: t.ticker,
+                    type: t.type,
+                    action: (t.closePrice ?? 0) > 0 ? "BUY" : "EXPIRADA",
+                    qty: t.qty,
+                    price: t.closePrice ?? t.premium,
+                    commission: undefined,
+                    pnl: tradePnl(t),
+                  })),
+                  ...selectedExecs.map(e => ({
+                    key: e.tradeId,
+                    symbol: e.symbol,
+                    type: e.secType,
+                    action: e.side,
+                    qty: e.size,
+                    price: e.price,
+                    commission: e.commission,
+                    pnl: e.realizedPnl,
+                  })),
+                ]} />
+              )}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )
+      })()}
 
       {/* Tooltip */}
       {tooltip && !selectedDay && (
@@ -429,6 +423,52 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
         </div>
       )}
     </div>
+  )
+}
+
+interface DayDetailRow {
+  key: string
+  symbol: string
+  type: string
+  action: string
+  qty: number
+  price: number
+  commission?: number
+  pnl: number
+}
+
+function DayDetailTable({ rows }: { rows: DayDetailRow[] }) {
+  return (
+    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.75rem" }}>
+      <thead>
+        <tr>
+          {["Símbolo", "Tipo", "Acción", "Cant.", "Precio", "Com.", "P&L"].map(h => (
+            <th key={h} style={{ textAlign: h === "P&L" ? "right" : "left", padding: "0.2rem 0.4rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.625rem", textTransform: "uppercase", borderBottom: "1px solid var(--border-subtle)" }}>{h}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(r => (
+          <tr key={r.key}>
+            <td style={{ padding: "0.25rem 0.4rem", fontWeight: 700, color: "var(--text-primary)" }}>{r.symbol}</td>
+            <td style={{ padding: "0.25rem 0.4rem", color: r.type === "Put" ? "var(--red)" : r.type === "Call" ? "var(--accent)" : "var(--text-secondary)", fontWeight: 600, fontSize: "0.6875rem" }}>
+              {r.type.toUpperCase()}
+            </td>
+            <td style={{ padding: "0.25rem 0.4rem", color: r.action === "EXPIRADA" ? "var(--text-muted)" : r.action === "SELL" ? "var(--orange)" : "var(--green)", fontSize: "0.6875rem", fontWeight: 600 }}>
+              {r.action}
+            </td>
+            <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{r.qty}</td>
+            <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${r.price.toFixed(2)}</td>
+            <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-muted)" }} className="num">
+              {r.commission !== undefined ? `$${Math.abs(r.commission).toFixed(2)}` : "—"}
+            </td>
+            <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: r.pnl > 0 ? "var(--green)" : r.pnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
+              {r.pnl !== 0 ? `${r.pnl >= 0 ? "+" : ""}$${r.pnl.toFixed(0)}` : "—"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 
