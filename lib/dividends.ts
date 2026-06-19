@@ -5,6 +5,7 @@ export interface DividendEntry {
   month: number  // 1-12
   company: string
   amount: number
+  date?: string  // YYYY-MM-DD, only available for imported data
 }
 
 export const DIVIDEND_DATA_2026: DividendEntry[] = [
@@ -134,6 +135,55 @@ export function buildActiveCompanies(data: DividendEntry[]): string[] {
     if (!seen.includes(d.company)) seen.push(d.company)
   }
   return seen
+}
+
+export function buildCumulativeDividends(data: DividendEntry[]) {
+  const months = Array.from({ length: 12 }, (_, i) => i + 1)
+  const companies = buildActiveCompanies(data)
+  const cum: Record<string, number> = {}
+  return months.map(m => {
+    const entry: Record<string, number> = { month: m }
+    for (const co of companies) {
+      const monthAmt = data.filter(d => d.month === m && d.company === co).reduce((s, d) => s + d.amount, 0)
+      cum[co] = (cum[co] ?? 0) + monthAmt
+      entry[co] = cum[co]
+    }
+    return entry
+  })
+}
+
+const MONTH_NAMES_SHORT_ES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+export interface CompanyDetail {
+  company: string
+  amount: number
+  count: number
+  avgPerPayment: number
+  monthsActive: number
+  lastPayment: string
+}
+
+export function buildCompanyDetail(data: DividendEntry[], year: number): CompanyDetail[] {
+  const map = new Map<string, { amount: number; count: number; months: Set<number>; lastDate?: string; lastMonth: number }>()
+  for (const d of data) {
+    const e = map.get(d.company) ?? { amount: 0, count: 0, months: new Set<number>(), lastMonth: 0 }
+    e.amount += d.amount
+    e.count += 1
+    e.months.add(d.month)
+    if (d.month > e.lastMonth) e.lastMonth = d.month
+    if (d.date && (!e.lastDate || d.date > e.lastDate)) e.lastDate = d.date
+    map.set(d.company, e)
+  }
+  return Array.from(map.entries())
+    .map(([company, e]) => ({
+      company,
+      amount: e.amount,
+      count: e.count,
+      avgPerPayment: e.count > 0 ? e.amount / e.count : 0,
+      monthsActive: e.months.size,
+      lastPayment: e.lastDate ?? `${MONTH_NAMES_SHORT_ES[e.lastMonth - 1]} ${year}`,
+    }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 // ── 2026 convenience exports (kept for backwards compat) ─────────────────────

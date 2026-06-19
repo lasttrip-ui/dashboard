@@ -8,8 +8,10 @@ import {
   DIVIDEND_DATA_2026,
   TOTAL_DIVIDENDS_2026,
   buildMonthlyDividends,
+  buildCumulativeDividends,
   buildDividendTotals,
   buildActiveCompanies,
+  buildCompanyDetail,
   colorForCompany,
 } from "@/lib/dividends"
 import { loadImportedDividends } from "@/lib/trade-store"
@@ -200,12 +202,14 @@ function importedDivsToEntries(divs: ImportedDividend[], year: number): Dividend
       month: parseInt(d.date.slice(5, 7), 10),
       company: d.company,
       amount: d.amount,
+      date: d.date,
     }))
 }
 
 function DividendosTab() {
   const [year, setYear] = useState(CURRENT_YEAR)
   const [importedDivs, setImportedDivs] = useState<ImportedDividend[]>([])
+  const [chartMode, setChartMode] = useState<"mensual" | "acumulado">("mensual")
 
   useEffect(() => {
     setImportedDivs(loadImportedDividends())
@@ -220,7 +224,10 @@ function DividendosTab() {
   }, [year, importedDivs])
 
   const monthlyData = useMemo(() => buildMonthlyDividends(yearData), [yearData])
+  const cumulativeData = useMemo(() => buildCumulativeDividends(yearData), [yearData])
+  const chartData = chartMode === "mensual" ? monthlyData : cumulativeData
   const totals = useMemo(() => buildDividendTotals(yearData), [yearData])
+  const companyDetail = useMemo(() => buildCompanyDetail(yearData, year), [yearData, year])
   const activeCos = useMemo(() => buildActiveCompanies(yearData), [yearData])
   const totalYear = yearData.reduce((s, d) => s + d.amount, 0)
   const monthsWithData = new Set(yearData.map(d => d.month)).size
@@ -307,11 +314,25 @@ function DividendosTab() {
 
         {/* Stacked bar chart */}
         <div className="card">
-          <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.875rem" }}>
-            Ingresos mensuales {year}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.875rem", flexWrap: "wrap", gap: "0.5rem" }}>
+            <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Ingresos {chartMode === "mensual" ? "mensuales" : "acumulados"} {year}
+            </div>
+            <div style={{ display: "flex", gap: "2px", background: "var(--bg-primary)", borderRadius: "8px", padding: "2px" }}>
+              {(["mensual", "acumulado"] as const).map(m => (
+                <button key={m} onClick={() => setChartMode(m)} style={{
+                  padding: "0.3rem 0.75rem", borderRadius: 6, border: "none", cursor: "pointer",
+                  background: chartMode === m ? "var(--accent)" : "transparent",
+                  color: chartMode === m ? "#fff" : "var(--text-secondary)",
+                  fontSize: "0.75rem", fontWeight: chartMode === m ? 600 : 400,
+                }}>
+                  {m === "mensual" ? "Mensual" : "Acumulado"}
+                </button>
+              ))}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
+            <BarChart data={chartData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
               <XAxis dataKey="month" tickFormatter={i => MONTHS_SHORT[i - 1]} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={48} />
               <Tooltip
@@ -346,12 +367,16 @@ function DividendosTab() {
                 <tr>
                   <th>Empresa</th>
                   <th>Total {year}</th>
+                  <th>Pagos</th>
+                  <th>Prom./Pago</th>
+                  <th>Meses activos</th>
                   <th>% del Total</th>
                   <th style={{ minWidth: 160 }}>Distribución</th>
+                  <th>Último pago</th>
                 </tr>
               </thead>
               <tbody>
-                {totals.map(({ company, amount }) => {
+                {companyDetail.map(({ company, amount, count, avgPerPayment, monthsActive, lastPayment }) => {
                   const pct = totalYear > 0 ? (amount / totalYear) * 100 : 0
                   const color = colorForCompany(company)
                   return (
@@ -361,12 +386,16 @@ function DividendosTab() {
                         {company}
                       </td>
                       <td className="num">${amount.toFixed(2)}</td>
+                      <td className="num" style={{ color: "var(--text-secondary)" }}>{count}</td>
+                      <td className="num" style={{ color: "var(--text-secondary)" }}>${avgPerPayment.toFixed(2)}</td>
+                      <td className="num" style={{ color: "var(--text-secondary)" }}>{monthsActive}/12</td>
                       <td className="num" style={{ color: "var(--text-secondary)" }}>{pct.toFixed(1)}%</td>
                       <td>
                         <div style={{ height: 6, background: "var(--border)", borderRadius: 3, overflow: "hidden" }}>
                           <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 3 }} />
                         </div>
                       </td>
+                      <td style={{ color: "var(--text-muted)", fontSize: "0.75rem", whiteSpace: "nowrap" }}>{lastPayment}</td>
                     </tr>
                   )
                 })}
