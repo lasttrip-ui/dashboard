@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { cumulativePnlData, navHistoryData } from "@/lib/data"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByPeriod, filterByMonth, filterByDateRange, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
+import { usdToEur } from "@/lib/currency"
 import PeriodSelector from "@/components/PeriodSelector"
 import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
@@ -15,10 +16,10 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtK(n: number): string {
-  const abs = Math.abs(n)
+  const eur = Math.abs(usdToEur(n))
   const sign = n >= 0 ? "+" : "-"
-  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}K`
-  return `${sign}$${abs.toFixed(0)}`
+  if (eur >= 1000) return `${sign}€${(eur / 1000).toFixed(1)}K`
+  return `${sign}€${eur.toFixed(0)}`
 }
 
 function fmtEur(n: number): string {
@@ -82,7 +83,7 @@ function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: numbe
         </div>
       </div>
       <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1, marginBottom: "0.5rem" }}>
-        {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2).replace(".", ",")}
+        {totalPnl >= 0 ? "+" : ""}€{usdToEur(totalPnl).toFixed(2).replace(".", ",")}
       </div>
       <div style={{ flex: 1, minHeight: 100 }}>
         <ResponsiveContainer width="100%" height={110}>
@@ -98,7 +99,7 @@ function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: numbe
             <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
               contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-              formatter={(v: number) => [`$${v.toFixed(2)}`, "P&L"]}
+              formatter={(v: number) => [`€${usdToEur(v).toFixed(2)}`, "P&L"]}
             />
             <Area type="monotone" dataKey="pnl" stroke={color} strokeWidth={2} fill="url(#grad_pos)" dot={false} />
           </AreaChart>

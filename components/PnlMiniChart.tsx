@@ -2,6 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { fmtDollarAbs } from "@/lib/utils"
+import { usdToEur } from "@/lib/currency"
 
 interface DataPoint {
   date: string
@@ -44,7 +45,7 @@ export default function PnlMiniChart({ data, dateRange }: PnlMiniChartProps) {
               tickLine={false}
               axisLine={false}
               width={44}
-              tickFormatter={v => `$${Math.round(v / 1000)}k`}
+              tickFormatter={v => `€${Math.round(usdToEur(v) / 1000)}k`}
             />
             <Tooltip
               contentStyle={{

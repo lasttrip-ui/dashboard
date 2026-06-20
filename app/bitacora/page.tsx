@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { loadImportedStockTxns, loadImportedDividends } from "@/lib/trade-store"
 import { buildDeGiroPositions, ISIN_TICKER } from "@/lib/degiro-positions"
+import { usdToEur } from "@/lib/currency"
 import { useTradeNotes } from "@/lib/notes"
 import type { OptionTrade } from "@/lib/data"
 import type { ImportedDividend } from "@/lib/import-parser"
@@ -17,9 +18,9 @@ function fmt(n: number, dec = 2) {
 // Best-effort USD/GBP → EUR conversion, consistent with the approximation
 // already used across Cartera (no live FX feed wired up).
 function toEur(amount: number, currency: string): number {
-  if (currency === "USD") return amount / 1.08
   if (currency === "GBP") return amount * 1.17
-  return amount
+  if (currency === "EUR") return amount
+  return usdToEur(amount)
 }
 
 function tickerKey(s: string): string {
@@ -162,7 +163,7 @@ function TickerCard({ g }: { g: TickerGroup }) {
             {g.totalPremiumsUSD !== 0 && (
               <div>
                 <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>P&L opciones neto</div>
-                <div style={{ fontWeight: 600, fontSize: 15, color: g.totalPremiumsUSD >= 0 ? "var(--green)" : "var(--red)" }}>{g.totalPremiumsUSD >= 0 ? "+" : ""}{fmt(g.totalPremiumsUSD)} $</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: g.totalPremiumsUSD >= 0 ? "var(--green)" : "var(--red)" }}>{g.totalPremiumsUSD >= 0 ? "+" : ""}{fmt(toEur(g.totalPremiumsUSD, "USD"))} €</div>
               </div>
             )}
             {g.dividendsEur !== 0 && (
@@ -229,7 +230,7 @@ function TickerCard({ g }: { g: TickerGroup }) {
                       {t.status === "closed" && t.closePrice !== undefined ? `$${fmt(t.closePrice)}` : "—"}
                     </td>
                     <td style={{ padding: "10px 16px", fontWeight: 600, fontSize: 13, color: net >= 0 ? "var(--green)" : "var(--red)" }}>
-                      {net >= 0 ? "+" : ""}{fmt(net)} $
+                      {net >= 0 ? "+" : ""}{fmt(toEur(net, "USD"))} €
                     </td>
                     <td style={{ padding: "10px 16px" }}>
                       <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: t.status === "open" ? "rgba(251,191,36,0.12)" : "var(--bg-hover)", color: t.status === "open" ? "var(--amber)" : "var(--text-secondary)" }}>

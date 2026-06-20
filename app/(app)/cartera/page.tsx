@@ -19,6 +19,7 @@ import {
   colorForCompany,
 } from "@/lib/dividends"
 import { loadImportedDividends, loadImportedStockTxns } from "@/lib/trade-store"
+import { usdToEur } from "@/lib/currency"
 import type { ImportedDividend } from "@/lib/import-parser"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
 import type { DividendEntry } from "@/lib/dividends"
@@ -345,13 +346,10 @@ function HeatmapTab({ positions, balances }: { positions: Position[]; balances: 
 const CURRENT_YEAR = 2026
 const YEAR_RANGE = [2021, 2022, 2023, 2024, 2025, 2026]
 
-// All dividend figures are normalised to EUR for display. Amounts span several
-// years so a single point-in-time FX rate is necessarily approximate; this
-// constant keeps the conversion consistent across the whole tab.
-const USD_TO_EUR = 0.92
-
+// All dividend figures are normalised to EUR for display. DeGiro dividends are
+// already EUR; everything else is treated as USD and converted.
 function dividendAmountEur(amount: number, currency?: string): number {
-  return currency === "EUR" ? amount : amount * USD_TO_EUR
+  return currency === "EUR" ? amount : usdToEur(amount)
 }
 
 function importedDivsToEntries(divs: ImportedDividend[], year: number): DividendEntry[] {
@@ -593,16 +591,17 @@ function startDateForEvolPeriod(period: EvolPeriod): string | null {
 
 interface EquityPoint { date: string; cumulative: number }
 
-function buildEquitySeries(trades: OptionTrade[], dividends: { month: number; amount: number; date?: string }[]): EquityPoint[] {
+function buildEquitySeries(trades: OptionTrade[], dividends: { month: number; amount: number; date?: string; currency?: string }[]): EquityPoint[] {
   const byDate = new Map<string, number>()
   for (const t of trades) {
     if (t.status !== "closed") continue
-    const pnl = realizedPnl(t)
+    const pnl = usdToEur(realizedPnl(t))  // option P&L is USD → EUR
     byDate.set(t.date, (byDate.get(t.date) ?? 0) + pnl)
   }
   for (const d of dividends) {
     const date = d.date ?? `2026-${String(d.month).padStart(2, "0")}-01`
-    byDate.set(date, (byDate.get(date) ?? 0) + d.amount)
+    const amt = d.currency === "EUR" ? d.amount : usdToEur(d.amount)
+    byDate.set(date, (byDate.get(date) ?? 0) + amt)
   }
   const sortedDates = Array.from(byDate.keys()).sort()
   let cumulative = 0
@@ -625,8 +624,8 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
   }, [])
 
   const allDividends = useMemo(() => {
-    const divs2026 = DIVIDEND_DATA_2026.map(d => ({ month: d.month, amount: d.amount }))
-    const imported = importedDivs.map(d => ({ month: parseInt((d.date ?? "0000-01-01").slice(5, 7), 10), amount: d.amount, date: d.date }))
+    const divs2026 = DIVIDEND_DATA_2026.map(d => ({ month: d.month, amount: d.amount, currency: d.currency }))
+    const imported = importedDivs.map(d => ({ month: parseInt((d.date ?? "0000-01-01").slice(5, 7), 10), amount: d.amount, date: d.date, currency: d.currency }))
     return [...divs2026, ...imported]
   }, [importedDivs])
 
@@ -694,15 +693,15 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
         <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.875rem" }}>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado al inicio</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{baseline >= 0 ? "+" : ""}${baseline.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{baseline >= 0 ? "+" : ""}€{baseline.toFixed(2)}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>Variación del periodo</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: periodChange >= 0 ? "var(--green)" : "var(--red)" }}>{periodChange >= 0 ? "+" : ""}${periodChange.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: periodChange >= 0 ? "var(--green)" : "var(--red)" }}>{periodChange >= 0 ? "+" : ""}€{periodChange.toFixed(2)}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado total</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{allTimeTotal >= 0 ? "+" : ""}${allTimeTotal.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{allTimeTotal >= 0 ? "+" : ""}€{allTimeTotal.toFixed(2)}</div>
           </div>
         </div>
 
@@ -720,10 +719,10 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
                 </linearGradient>
               </defs>
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} minTickGap={30} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={56} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v.toFixed(0)}`} width={56} />
               <Tooltip
                 contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-                formatter={(v: number) => [`$${v.toFixed(2)}`, "Acumulado"]}
+                formatter={(v: number) => [`€${v.toFixed(2)}`, "Acumulado"]}
               />
               <Area type="monotone" dataKey="cumulative" stroke="var(--accent)" strokeWidth={2} fill="url(#equityFill)" />
             </AreaChart>

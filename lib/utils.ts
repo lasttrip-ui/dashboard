@@ -1,4 +1,5 @@
 import { OptionTrade } from "./data"
+import { usdToEur } from "./currency"
 
 export const TODAY = new Date().toISOString().slice(0, 10)
 
@@ -11,15 +12,18 @@ export function fmtNumber(n: number, decimals = 2): string {
   return decPart !== undefined ? `${intFormatted},${decPart}` : intFormatted
 }
 
-/** Format as dollar amount with sign */
+// Option P&L is stored in USD but displayed in the account's base currency
+// (EUR), converted at a fixed approximate rate. Names kept for compatibility.
+/** Format an option-P&L amount (USD input) as EUR with sign */
 export function fmtDollar(n: number, decimals = 2): string {
-  const sign = n >= 0 ? "+" : "-"
-  return `${sign}$${fmtNumber(Math.abs(n), decimals)}`
+  const eur = usdToEur(n)
+  const sign = eur >= 0 ? "+" : "-"
+  return `${sign}€${fmtNumber(Math.abs(eur), decimals)}`
 }
 
-/** Format as dollar amount without sign */
+/** Format an option-P&L amount (USD input) as EUR without sign */
 export function fmtDollarAbs(n: number, decimals = 2): string {
-  return `$${fmtNumber(Math.abs(n), decimals)}`
+  return `€${fmtNumber(Math.abs(usdToEur(n)), decimals)}`
 }
 
 // ── Date utilities ──────────────────────────────────────────────────────────

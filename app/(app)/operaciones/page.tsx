@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, MONTH_NAMES_ES } from "@/lib/utils"
+import { usdToEur } from "@/lib/currency"
 import TradesTable from "@/components/TradesTable"
 import AddTradeModal from "@/components/AddTradeModal"
 import { TODAY } from "@/lib/utils"
@@ -51,7 +52,7 @@ export default function OperacionesPage() {
         {/* Stats strip */}
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           {[
-            { label: "P&L mes", value: `${stats.totalPnl >= 0 ? "+" : ""}$${stats.totalPnl.toFixed(2)}`, color: stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" },
+            { label: "P&L mes", value: `${stats.totalPnl >= 0 ? "+" : ""}€${usdToEur(stats.totalPnl).toFixed(2)}`, color: stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" },
             { label: "Ganadas", value: `${stats.wins}`, color: "var(--green)" },
             { label: "Perdidas", value: `${stats.losses}`, color: "var(--red)" },
             { label: "Win rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 60 ? "var(--green)" : "var(--orange)" },

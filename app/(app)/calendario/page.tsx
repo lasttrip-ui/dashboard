@@ -3,15 +3,16 @@
 import { useState } from "react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, tradePnl, getWeeksInMonth, dateToString, getDayData, MONTH_NAMES_ES, TODAY } from "@/lib/utils"
+import { usdToEur } from "@/lib/currency"
 import type { OptionTrade } from "@/lib/data"
 
 const DAY_HEADERS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]
 
 function fmtK(n: number): string {
-  const abs = Math.abs(n)
+  const eur = Math.abs(usdToEur(n))
   const sign = n >= 0 ? "+" : "-"
-  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}K`
-  return `${sign}$${abs.toFixed(0)}`
+  if (eur >= 1000) return `${sign}€${(eur / 1000).toFixed(1)}K`
+  return `${sign}€${eur.toFixed(0)}`
 }
 
 type CalView = "mes" | "anio"

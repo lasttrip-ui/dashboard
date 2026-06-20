@@ -15,6 +15,7 @@ import {
   fmtDollar,
   getMarketHoliday,
 } from "@/lib/utils"
+import { usdToEur } from "@/lib/currency"
 
 const DAY_HEADERS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"]
 
@@ -341,7 +342,7 @@ export default function Calendar({ trades, viewYear, viewMonth, onMonthChange, e
               <span style={{ color: "var(--text-secondary)" }}>Abiertos <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{openRows.length}</span></span>
               <span style={{ color: "var(--text-secondary)" }}>Cerrados <span className="num" style={{ fontWeight: 700, color: "var(--text-primary)" }}>{closedCount}</span></span>
               <span className="num" style={{ fontWeight: 700, color: totalPnl > 0 ? "var(--green)" : totalPnl < 0 ? "var(--red)" : "var(--text-muted)" }}>
-                {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(2)}
+                {totalPnl >= 0 ? "+" : ""}€{usdToEur(totalPnl).toFixed(2)}
               </span>
             </div>
 
@@ -460,10 +461,10 @@ function DayDetailTable({ rows }: { rows: DayDetailRow[] }) {
             <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">{r.qty}</td>
             <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-secondary)" }} className="num">${r.price.toFixed(2)}</td>
             <td style={{ padding: "0.25rem 0.4rem", color: "var(--text-muted)" }} className="num">
-              {r.commission !== undefined ? `$${Math.abs(r.commission).toFixed(2)}` : "—"}
+              {r.commission !== undefined ? `€${Math.abs(usdToEur(r.commission)).toFixed(2)}` : "—"}
             </td>
             <td style={{ padding: "0.25rem 0.4rem", textAlign: "right", fontWeight: 700, color: r.pnl > 0 ? "var(--green)" : r.pnl < 0 ? "var(--red)" : "var(--text-muted)" }} className="num">
-              {r.pnl !== 0 ? `${r.pnl >= 0 ? "+" : ""}$${r.pnl.toFixed(0)}` : "—"}
+              {r.pnl !== 0 ? `${r.pnl >= 0 ? "+" : ""}€${usdToEur(r.pnl).toFixed(0)}` : "—"}
             </td>
           </tr>
         ))}
@@ -473,10 +474,10 @@ function DayDetailTable({ rows }: { rows: DayDetailRow[] }) {
 }
 
 function fmtDollarShort(n: number): string {
-  const abs = Math.abs(n)
+  const eur = Math.abs(usdToEur(n))
   const sign = n < 0 ? "-" : "+"
-  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(1)}k`
-  return `${sign}$${Math.round(abs)}`
+  if (eur >= 1000) return `${sign}€${(eur / 1000).toFixed(1)}k`
+  return `${sign}€${Math.round(eur)}`
 }
 
 const navBtnStyle: React.CSSProperties = {
