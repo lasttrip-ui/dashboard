@@ -6,6 +6,7 @@ export interface DividendEntry {
   company: string
   amount: number
   date?: string  // YYYY-MM-DD, only available for imported data
+  currency?: string  // native currency of the amount (defaults to USD)
 }
 
 export const DIVIDEND_DATA_2026: DividendEntry[] = [

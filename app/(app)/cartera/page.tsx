@@ -345,6 +345,15 @@ function HeatmapTab({ positions, balances }: { positions: Position[]; balances: 
 const CURRENT_YEAR = 2026
 const YEAR_RANGE = [2021, 2022, 2023, 2024, 2025, 2026]
 
+// All dividend figures are normalised to EUR for display. Amounts span several
+// years so a single point-in-time FX rate is necessarily approximate; this
+// constant keeps the conversion consistent across the whole tab.
+const USD_TO_EUR = 0.92
+
+function dividendAmountEur(amount: number, currency?: string): number {
+  return currency === "EUR" ? amount : amount * USD_TO_EUR
+}
+
 function importedDivsToEntries(divs: ImportedDividend[], year: number): DividendEntry[] {
   return divs
     .filter(d => d.date.startsWith(String(year)))
@@ -353,6 +362,7 @@ function importedDivsToEntries(divs: ImportedDividend[], year: number): Dividend
       company: d.company,
       amount: d.amount,
       date: d.date,
+      currency: d.currency,
     }))
 }
 
@@ -370,8 +380,10 @@ function DividendosTab() {
 
   const yearData = useMemo<DividendEntry[]>(() => {
     const imported = importedDivsToEntries(importedDivs, year)
-    if (year === CURRENT_YEAR) return [...DIVIDEND_DATA_2026, ...imported]
-    return imported
+    const raw = year === CURRENT_YEAR ? [...DIVIDEND_DATA_2026, ...imported] : imported
+    // Convert every entry to EUR up front so all downstream aggregates
+    // (chart, KPIs, company table) are already in the same currency.
+    return raw.map(e => ({ ...e, amount: dividendAmountEur(e.amount, e.currency) }))
   }, [year, importedDivs])
 
   const monthlyData = useMemo(() => buildMonthlyDividends(yearData), [yearData])
@@ -448,9 +460,9 @@ function DividendosTab() {
         {/* KPI strip */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
           {[
-            { label: `Ingresos ${year}`, value: `$${totalYear.toFixed(2)}`, sub: undefined },
-            { label: "Promedio Mensual", value: `$${monthsWithData > 0 ? (totalYear / monthsWithData).toFixed(2) : "0.00"}`, sub: `${monthsWithData} meses con dividendos` },
-            { label: "Promedio Diario", value: `$${(totalYear / 365).toFixed(2)}`, sub: undefined },
+            { label: `Ingresos ${year}`, value: `€${totalYear.toFixed(2)}`, sub: undefined },
+            { label: "Promedio Mensual", value: `€${monthsWithData > 0 ? (totalYear / monthsWithData).toFixed(2) : "0.00"}`, sub: `${monthsWithData} meses con dividendos` },
+            { label: "Promedio Diario", value: `€${(totalYear / 365).toFixed(2)}`, sub: undefined },
             { label: "Empresas", value: `${activeCos.length}`, sub: topPayer !== "—" ? `${topPayer} es tu mayor pagador` : undefined },
           ].map(c => (
             <div key={c.label} className="card" style={{ padding: "0.875rem 1rem" }}>
@@ -485,10 +497,10 @@ function DividendosTab() {
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} margin={{ left: 0, right: 8, top: 4, bottom: 8 }}>
               <XAxis dataKey="month" tickFormatter={i => MONTHS_SHORT[i - 1]} tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `$${v.toFixed(0)}`} width={48} />
+              <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v.toFixed(0)}`} width={48} />
               <Tooltip
                 contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-                formatter={(v: number, name: string) => [`$${v.toFixed(2)}`, name]}
+                formatter={(v: number, name: string) => [`€${v.toFixed(2)}`, name]}
                 labelFormatter={m => MONTHS_SHORT[Number(m) - 1]}
               />
               {activeCos.map((co, idx) => (
@@ -536,9 +548,9 @@ function DividendosTab() {
                         <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
                         {company}
                       </td>
-                      <td className="num">${amount.toFixed(2)}</td>
+                      <td className="num">€{amount.toFixed(2)}</td>
                       <td className="num" style={{ color: "var(--text-secondary)" }}>{count}</td>
-                      <td className="num" style={{ color: "var(--text-secondary)" }}>${avgPerPayment.toFixed(2)}</td>
+                      <td className="num" style={{ color: "var(--text-secondary)" }}>€{avgPerPayment.toFixed(2)}</td>
                       <td className="num" style={{ color: "var(--text-secondary)" }}>{monthsActive}/12</td>
                       <td className="num" style={{ color: "var(--text-secondary)" }}>{pct.toFixed(1)}%</td>
                       <td>
