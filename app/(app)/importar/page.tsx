@@ -1,10 +1,11 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, parseDeGiroDividends, type Broker, type ImportedExecution, type ImportedDividend } from "@/lib/import-parser"
-import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends } from "@/lib/trade-store"
+import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, parseDeGiroDividends, parseDeGiroStockTransactions, type Broker, type ImportedExecution, type ImportedDividend, type ImportedStockTransaction } from "@/lib/import-parser"
+import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends, loadImportedStockTxns, saveImportedStockTxns, clearImportedStockTxns, mergeImportedStockTxns } from "@/lib/trade-store"
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
+import { buildDeGiroPositions } from "@/lib/degiro-positions"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -49,9 +50,11 @@ export default function ImportPage() {
   const [parsed, setParsed] = useState<OptionTrade[] | null>(null)
   const [parsedExecs, setParsedExecs] = useState<ImportedExecution[]>([])
   const [parsedDivs, setParsedDivs] = useState<ImportedDividend[]>([])
+  const [parsedStockTxns, setParsedStockTxns] = useState<ImportedStockTransaction[]>([])
   const [saved, setSaved] = useState<OptionTrade[]>(() => loadImported())
   const [savedExecs, setSavedExecs] = useState<ImportedExecution[]>(() => loadImportedExecs())
   const [savedDivs, setSavedDivs] = useState<ImportedDividend[]>(() => loadImportedDividends())
+  const [savedStockTxns, setSavedStockTxns] = useState<ImportedStockTransaction[]>(() => loadImportedStockTxns())
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
@@ -70,12 +73,14 @@ export default function ImportPage() {
       const result = parseCSV(text, detectedBroker)
       const execs = detectedBroker === "IBKR" ? parseIBKRExecutions(text) : []
       const divs = detectedBroker === "IBKR" ? parseIBKRDividends(text) : parseDeGiroDividends(text)
-      if (result.length === 0 && execs.length === 0 && divs.length === 0) {
+      const stockTxns = detectedBroker === "DeGiro" ? parseDeGiroStockTransactions(text) : []
+      if (result.length === 0 && execs.length === 0 && divs.length === 0 && stockTxns.length === 0) {
         setError("No se encontraron movimientos en el archivo. Comprueba que es un extracto de actividad de IBKR (con la sección «Operaciones»), un export de transacciones de DeGiro, o un extracto de cuenta de DeGiro con dividendos.")
       } else {
         if (result.length > 0) setParsed(result)
         if (execs.length > 0) setParsedExecs(execs)
         if (divs.length > 0) setParsedDivs(divs)
+        if (stockTxns.length > 0) setParsedStockTxns(stockTxns)
       }
     }
     reader.readAsText(file, "utf-8")
@@ -118,9 +123,16 @@ export default function ImportPage() {
       saveImportedDividends(merged)
       setSavedDivs(merged)
     }
+    if (parsedStockTxns.length > 0) {
+      const current = loadImportedStockTxns()
+      const merged = mergeImportedStockTxns(current, parsedStockTxns)
+      saveImportedStockTxns(merged)
+      setSavedStockTxns(merged)
+    }
     setParsed(null)
     setParsedExecs([])
     setParsedDivs([])
+    setParsedStockTxns([])
     setFileName(null)
   }
 
@@ -128,9 +140,11 @@ export default function ImportPage() {
     clearImported()
     clearImportedExecs()
     clearImportedDividends()
+    clearImportedStockTxns()
     setSaved([])
     setSavedExecs([])
     setSavedDivs([])
+    setSavedStockTxns([])
   }
 
   const info = INSTRUCTIONS[broker]
@@ -227,7 +241,7 @@ export default function ImportPage() {
       )}
 
       {/* Preview */}
-      {(parsed || parsedExecs.length > 0 || parsedDivs.length > 0) && (
+      {(parsed || parsedExecs.length > 0 || parsedDivs.length > 0 || parsedStockTxns.length > 0) && (
         <div className="card" style={{ padding: "1rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
             <div>
@@ -236,6 +250,7 @@ export default function ImportPage() {
                 {parsed && ` — ${parsed.length} opciones`}
                 {parsedExecs.length > 0 && ` — ${parsedExecs.length} movimientos`}
                 {parsedDivs.length > 0 && ` — ${parsedDivs.length} dividendos`}
+                {parsedStockTxns.length > 0 && ` — ${parsedStockTxns.length} transacciones de acciones`}
               </div>
               {parsedExecs.length > 0 && (
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
@@ -327,6 +342,40 @@ export default function ImportPage() {
             </div>
           )}
 
+          {/* Stock positions preview (computed from transactions) */}
+          {parsedStockTxns.length > 0 && (
+            <div style={{ overflowX: "auto", marginBottom: parsed ? "1rem" : 0 }}>
+              <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.5rem" }}>
+                Posiciones resultantes en acciones (cantidad neta a fecha de hoy)
+              </div>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
+                <thead>
+                  <tr>
+                    {["Símbolo", "Empresa", "Cant.", "Coste medio", "CCY"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: "0.375rem 0.5rem", color: "var(--text-muted)", fontWeight: 500, fontSize: "0.6875rem", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--border)" }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {buildDeGiroPositions(parsedStockTxns).map((p, i) => (
+                    <tr key={p.contractId} style={{ background: i % 2 === 0 ? "transparent" : "var(--bg-hover)" }}>
+                      <td style={{ padding: "0.3rem 0.5rem", fontWeight: 700, color: "var(--text-primary)" }}>{p.symbol}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)", fontSize: "0.75rem" }}>{p.description}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)" }} className="num">{p.position}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-secondary)" }} className="num">{p.averagePrice.toFixed(2)}</td>
+                      <td style={{ padding: "0.3rem 0.5rem", color: "var(--text-muted)", fontSize: "0.75rem" }}>{p.currency}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ marginTop: "0.5rem", fontSize: "0.6875rem", color: "var(--text-muted)", fontStyle: "italic" }}>
+                Coste medio aproximado a partir del histórico de compras. El precio de mercado se actualizará con cotización en vivo cuando esté disponible.
+              </div>
+            </div>
+          )}
+
           {parsed && <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8125rem" }}>
               <thead>
@@ -377,6 +426,25 @@ export default function ImportPage() {
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
                   {savedDivs[0]?.date.slice(0, 4)} → {savedDivs[savedDivs.length - 1]?.date.slice(0, 4)} · Visibles en Cartera → Dividendos
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved stock positions summary */}
+      {savedStockTxns.length > 0 && (
+        <div className="card" style={{ padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <CheckCircle size={16} color="var(--green)" />
+              <div>
+                <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                  {buildDeGiroPositions(savedStockTxns).length} posiciones de acciones DeGiro activas
+                </div>
+                <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                  De {savedStockTxns.length} transacciones importadas · Visibles en Cartera → Posiciones y Mapa de calor
                 </div>
               </div>
             </div>

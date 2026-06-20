@@ -18,8 +18,9 @@ import {
   buildCompanyDetail,
   colorForCompany,
 } from "@/lib/dividends"
-import { loadImportedDividends } from "@/lib/trade-store"
+import { loadImportedDividends, loadImportedStockTxns } from "@/lib/trade-store"
 import type { ImportedDividend } from "@/lib/import-parser"
+import { buildDeGiroPositions } from "@/lib/degiro-positions"
 import type { DividendEntry } from "@/lib/dividends"
 import type { IBKRSnapshot, Position, Balance } from "@/components/portfolio/types"
 import { useLiveQuotes } from "@/hooks/use-live-quotes"
@@ -705,6 +706,7 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 export default function CarteraPage() {
   const [tab, setTab] = useState<Tab>("dividendos")
   const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
+  const [degiroPositions, setDegiroPositions] = useState<Position[]>([])
 
   useEffect(() => {
     fetch("/api/ibkr", { cache: "no-store" })
@@ -712,6 +714,15 @@ export default function CarteraPage() {
       .then(d => d && setSnapshot(d))
       .catch(() => null)
   }, [])
+
+  useEffect(() => {
+    function refresh() { setDegiroPositions(buildDeGiroPositions(loadImportedStockTxns())) }
+    refresh()
+    window.addEventListener("storage", refresh)
+    return () => window.removeEventListener("storage", refresh)
+  }, [])
+
+  const allPositions = useMemo(() => [...(snapshot?.positions ?? []), ...degiroPositions], [snapshot, degiroPositions])
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "cartera",    label: "Seguimiento de Cartera" },
@@ -748,8 +759,8 @@ export default function CarteraPage() {
 
       {/* Content */}
       {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} />}
-      {tab === "posiciones" && <PositionesTab positions={snapshot?.positions ?? []} balances={snapshot?.balances ?? []} />}
-      {tab === "mapa"       && <HeatmapTab positions={snapshot?.positions ?? []} />}
+      {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} />}
+      {tab === "mapa"       && <HeatmapTab positions={allPositions} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>
   )

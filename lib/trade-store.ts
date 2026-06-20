@@ -125,3 +125,33 @@ export function mergeImportedDividends(base: ImportedDividend[], incoming: Impor
   const unique = incoming.filter(d => !keys.has(`${d.date}_${d.company}_${d.amount}`))
   return [...base, ...unique].sort((a, b) => a.date.localeCompare(b.date))
 }
+
+// ── Imported stock transactions (DeGiro buys/sells, used to build positions) ─
+
+import type { ImportedStockTransaction } from "./import-parser"
+
+const STOCK_TXN_KEY = "tt-imported-stock-txns"
+
+export function loadImportedStockTxns(): ImportedStockTransaction[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = localStorage.getItem(STOCK_TXN_KEY)
+    return raw ? (JSON.parse(raw) as ImportedStockTransaction[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveImportedStockTxns(txns: ImportedStockTransaction[]): void {
+  localStorage.setItem(STOCK_TXN_KEY, JSON.stringify(txns))
+}
+
+export function clearImportedStockTxns(): void {
+  localStorage.removeItem(STOCK_TXN_KEY)
+}
+
+export function mergeImportedStockTxns(base: ImportedStockTransaction[], incoming: ImportedStockTransaction[]): ImportedStockTransaction[] {
+  const keys = new Set(base.map(t => `${t.date}_${t.isin}_${t.qty}_${t.price}`))
+  const unique = incoming.filter(t => !keys.has(`${t.date}_${t.isin}_${t.qty}_${t.price}`))
+  return [...base, ...unique].sort((a, b) => a.date.localeCompare(b.date))
+}

@@ -324,6 +324,51 @@ export function parseIBKRDividends(csv: string): ImportedDividend[] {
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
 
+// ── DeGiro stock Transactions CSV (buys/sells, full account history) ─────────
+// Columnas: Fecha, Hora, Producto, ISIN, Bolsa de referencia, Centro de ejecución,
+// Número, Precio, [ccy], Valor local, [ccy], Valor EUR, Tipo de cambio,
+// Comisión AutoFX, Costes externos EUR, Total EUR, ID Orden
+// Número > 0 = compra, < 0 = venta. Se agrupa por ISIN para calcular la posición neta.
+
+export interface ImportedStockTransaction {
+  isin: string
+  product: string
+  date: string  // YYYY-MM-DD
+  qty: number   // signed: + compra, - venta
+  price: number
+  currency: string
+}
+
+export function parseDeGiroStockTransactions(csv: string): ImportedStockTransaction[] {
+  const lines = csv.split(/\r?\n/)
+  const header = (lines[0] || "").toLowerCase()
+  const hasQtyCol = header.includes("número") || header.includes("number") || header.includes("quantity")
+  const hasValueCol = header.includes("valor eur") || header.includes("local value")
+  if (!hasQtyCol || !hasValueCol) return []
+
+  const out: ImportedStockTransaction[] = []
+  for (let i = 1; i < lines.length; i++) {
+    const c = parseLine(lines[i])
+    if (c.length < 12) continue
+
+    const isin = (c[3] || "").trim()
+    const product = (c[2] || "").trim()
+    if (!isin || !product) continue
+
+    const date = toISO(c[0] || "")
+    if (!date) continue
+
+    const qty = parseFloat((c[6] || "0").replace(",", "."))
+    const price = Math.abs(parseFloat((c[7] || "0").replace(",", ".")))
+    const currency = (c[8] || "EUR").trim()
+    if (isNaN(qty) || qty === 0) continue
+
+    out.push({ isin, product, date, qty, price, currency })
+  }
+
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
 // ── DeGiro Account statement CSV (cash movements) ─────────────────────────────
 // Columnas: Fecha, Hora, Fecha valor, Producto, ISIN, Descripción, Tipo, [ccy, Variación], [ccy, Saldo], ID Orden
 // La fila de "Dividendo" trae el importe bruto; "Retención del dividendo" es la retención (negativa) y se ignora.
