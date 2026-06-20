@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react"
 import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, parseDeGiroDividends, parseDeGiroStockTransactions, type Broker, type ImportedExecution, type ImportedDividend, type ImportedStockTransaction } from "@/lib/import-parser"
-import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends, loadImportedStockTxns, saveImportedStockTxns, clearImportedStockTxns, mergeImportedStockTxns } from "@/lib/trade-store"
+import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends, loadImportedStockTxns, saveImportedStockTxns, clearImportedStockTxns } from "@/lib/trade-store"
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
@@ -124,10 +124,11 @@ export default function ImportPage() {
       setSavedDivs(merged)
     }
     if (parsedStockTxns.length > 0) {
-      const current = loadImportedStockTxns()
-      const merged = mergeImportedStockTxns(current, parsedStockTxns)
-      saveImportedStockTxns(merged)
-      setSavedStockTxns(merged)
+      // The Transacciones export is always the full account history, not an
+      // incremental feed, so each upload replaces the stored set outright
+      // (merging would keep stale rows parsed by an older app version).
+      saveImportedStockTxns(parsedStockTxns)
+      setSavedStockTxns(parsedStockTxns)
     }
     setParsed(null)
     setParsedExecs([])

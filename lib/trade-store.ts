@@ -149,9 +149,3 @@ export function saveImportedStockTxns(txns: ImportedStockTransaction[]): void {
 export function clearImportedStockTxns(): void {
   localStorage.removeItem(STOCK_TXN_KEY)
 }
-
-export function mergeImportedStockTxns(base: ImportedStockTransaction[], incoming: ImportedStockTransaction[]): ImportedStockTransaction[] {
-  const keys = new Set(base.map(t => `${t.date}_${t.isin}_${t.qty}_${t.price}`))
-  const unique = incoming.filter(t => !keys.has(`${t.date}_${t.isin}_${t.qty}_${t.price}`))
-  return [...base, ...unique].sort((a, b) => a.date.localeCompare(b.date))
-}
