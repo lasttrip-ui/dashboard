@@ -37,28 +37,45 @@ function hashContractId(isin: string): number {
 
 /**
  * Builds approximate current stock positions from a full DeGiro transaction
- * history: nets quantity per ISIN and uses the weighted-average buy price as
- * cost basis. Closed-out ISINs (net qty ~0) are omitted. Live market price is
- * filled in later by useLiveQuotes when the ticker is recognized.
+ * history, replaying it chronologically with a running weighted-average cost:
+ * real buys raise shares and cost, real sells reduce both at the current
+ * average (realizing P&L), and corporate actions (splits, spin-offs, mergers)
+ * only rescale the share count while leaving the cost basis untouched — this
+ * is what makes a 4-for-1 split divide the average cost by 4 instead of
+ * treating the post-split share batch as a fresh purchase at the new price.
+ * Closed-out ISINs (net qty ~0) are omitted. Live market price is filled in
+ * later by useLiveQuotes when the ticker is recognized.
  */
 export function buildDeGiroPositions(txns: ImportedStockTransaction[]): Position[] {
   interface Acc {
     product: string
-    netQty: number
-    buyQty: number
-    buyCost: number
+    shares: number
+    totalCost: number
     currency: string
     lastDate: string
   }
   const map = new Map<string, Acc>()
 
-  for (const t of txns) {
-    const e = map.get(t.isin) ?? { product: t.product, netQty: 0, buyQty: 0, buyCost: 0, currency: t.currency, lastDate: t.date }
-    e.netQty += t.qty
-    if (t.qty > 0) {
-      e.buyQty += t.qty
-      e.buyCost += t.qty * t.price
+  const ordered = [...txns].sort((a, b) => a.date.localeCompare(b.date))
+  for (const t of ordered) {
+    const e = map.get(t.isin) ?? { product: t.product, shares: 0, totalCost: 0, currency: t.currency, lastDate: t.date }
+
+    if (t.isCorporateAction) {
+      e.shares += t.qty
+    } else if (t.qty > 0) {
+      e.shares += t.qty
+      e.totalCost += t.qty * t.price
+    } else {
+      const avg = e.shares > 0 ? e.totalCost / e.shares : 0
+      const sellQty = Math.min(Math.abs(t.qty), e.shares)
+      e.shares -= sellQty
+      e.totalCost -= avg * sellQty
+      if (e.shares < 0.0001) {
+        e.shares = 0
+        e.totalCost = 0
+      }
     }
+
     if (t.date >= e.lastDate) {
       e.lastDate = t.date
       e.product = t.product
@@ -69,16 +86,16 @@ export function buildDeGiroPositions(txns: ImportedStockTransaction[]): Position
 
   const positions: Position[] = []
   for (const [isin, e] of Array.from(map.entries())) {
-    if (Math.abs(e.netQty) < 0.0001) continue
-    const averagePrice = e.buyQty > 0 ? e.buyCost / e.buyQty : 0
+    if (Math.abs(e.shares) < 0.0001) continue
+    const averagePrice = e.shares > 0 ? e.totalCost / e.shares : 0
     positions.push({
       contractId: hashContractId(isin),
       symbol: ISIN_TICKER[isin] ?? e.product.split(/\s+/)[0],
       description: e.product,
       assetClass: "STK",
-      position: e.netQty,
+      position: e.shares,
       marketPrice: averagePrice,
-      marketValue: averagePrice * e.netQty,
+      marketValue: averagePrice * e.shares,
       currency: e.currency,
       averagePrice,
       unrealizedPnl: 0,

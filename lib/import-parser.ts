@@ -338,6 +338,10 @@ export interface ImportedStockTransaction {
   qty: number   // signed: + compra, - venta
   price: number
   currency: string
+  // Corporate actions (splits, spin-offs, mergers) show up as buy/sell pairs
+  // with no order ID. They change share count but aren't real purchases at
+  // that price, so they must be excluded from cost-basis math.
+  isCorporateAction: boolean
 }
 
 export function parseDeGiroStockTransactions(csv: string): ImportedStockTransaction[] {
@@ -364,7 +368,9 @@ export function parseDeGiroStockTransactions(csv: string): ImportedStockTransact
     const currency = (c[8] || "EUR").trim()
     if (isNaN(qty) || qty === 0) continue
 
-    out.push({ isin, product, date, qty, price, currency })
+    const isCorporateAction = !(c[16] || "").trim()
+
+    out.push({ isin, product, date, qty, price, currency, isCorporateAction })
   }
 
   return out.sort((a, b) => a.date.localeCompare(b.date))
