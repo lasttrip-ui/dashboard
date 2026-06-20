@@ -3,7 +3,7 @@ import type { Position } from "@/components/portfolio/types"
 
 // Best-effort ISIN → ticker map for live quotes (Yahoo Finance). Stocks not
 // listed here still show up with their cost basis, just without a live price.
-const ISIN_TICKER: Record<string, string> = {
+export const ISIN_TICKER: Record<string, string> = {
   US0378331005: "AAPL",
   US0231351067: "AMZN",
   US88160R1014: "TSLA",

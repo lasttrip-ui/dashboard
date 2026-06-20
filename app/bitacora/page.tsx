@@ -1,15 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
-import { usePortfolio } from "@/lib/imported-portfolio"
-import { useImportedTrades } from "@/lib/imported-trades"
+import { useAllTrades } from "@/hooks/use-all-trades"
+import { loadImportedStockTxns, loadImportedDividends } from "@/lib/trade-store"
+import { buildDeGiroPositions, ISIN_TICKER } from "@/lib/degiro-positions"
 import { useTradeNotes } from "@/lib/notes"
 import type { OptionTrade } from "@/lib/data"
-import { trades as demoTrades } from "@/lib/data"
+import type { ImportedDividend } from "@/lib/import-parser"
+import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
 
 function fmt(n: number, dec = 2) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+
+// Best-effort USD/GBP → EUR conversion, consistent with the approximation
+// already used across Cartera (no live FX feed wired up).
+function toEur(amount: number, currency: string): number {
+  if (currency === "USD") return amount / 1.08
+  if (currency === "GBP") return amount * 1.17
+  return amount
+}
+
+function tickerKey(s: string): string {
+  return s.toUpperCase().split(/\s+/)[0]
 }
 
 function netPremium(t: OptionTrade): number {
@@ -22,64 +36,59 @@ function netPremium(t: OptionTrade): number {
 
 interface TickerGroup {
   ticker: string
-  // DeGiro
   shares: number
   avgCostEur: number
   totalInvestedEur: number
-  // IB options
   trades: OptionTrade[]
   totalPremiumsUSD: number
-  // Computed
+  dividendsEur: number
   effectiveCostPerShare: number
   totalSavingEur: number
 }
 
-function buildGroups(
-  positions: ReturnType<typeof usePortfolio>["positions"],
-  ibTrades: OptionTrade[]
-): TickerGroup[] {
+function buildGroups(positions: Position[], trades: OptionTrade[], dividends: ImportedDividend[]): TickerGroup[] {
   const groups = new Map<string, TickerGroup>()
 
-  // Seed from DeGiro positions
-  for (const pos of positions) {
-    const ticker = pos.ticker.toUpperCase().split(" ")[0]
-    groups.set(ticker, {
-      ticker,
-      shares: pos.shares,
-      avgCostEur: pos.avgCost,
-      totalInvestedEur: pos.totalInvested,
-      trades: [],
-      totalPremiumsUSD: 0,
-      effectiveCostPerShare: pos.avgCost,
-      totalSavingEur: 0,
-    })
+  function ensure(ticker: string): TickerGroup {
+    let g = groups.get(ticker)
+    if (!g) {
+      g = { ticker, shares: 0, avgCostEur: 0, totalInvestedEur: 0, trades: [], totalPremiumsUSD: 0, dividendsEur: 0, effectiveCostPerShare: 0, totalSavingEur: 0 }
+      groups.set(ticker, g)
+    }
+    return g
   }
 
-  // Add IB trades
-  for (const t of ibTrades) {
-    const ticker = t.ticker.toUpperCase()
-    if (!groups.has(ticker)) {
-      groups.set(ticker, { ticker, shares: 0, avgCostEur: 0, totalInvestedEur: 0, trades: [], totalPremiumsUSD: 0, effectiveCostPerShare: 0, totalSavingEur: 0 })
-    }
-    const g = groups.get(ticker)!
+  for (const p of positions) {
+    if (p.assetClass !== "STK" || p.position <= 0) continue
+    const g = ensure(p.symbol.toUpperCase())
+    g.shares += p.position
+    g.totalInvestedEur += toEur(p.averagePrice * p.position, p.currency)
+  }
+
+  for (const t of trades) {
+    const g = ensure(t.ticker.toUpperCase())
     g.trades.push(t)
     g.totalPremiumsUSD += netPremium(t)
   }
 
-  // Compute effective cost
-  groups.forEach((g) => {
-    const premiumsEur = g.totalPremiumsUSD / 1.08
+  for (const d of dividends) {
+    const ticker = (d.isin && ISIN_TICKER[d.isin]) || tickerKey(d.company)
+    const g = ensure(ticker)
+    g.dividendsEur += toEur(d.amount, d.currency)
+  }
+
+  groups.forEach(g => {
+    g.avgCostEur = g.shares > 0 ? g.totalInvestedEur / g.shares : 0
+    const premiumsEur = toEur(g.totalPremiumsUSD, "USD")
+    g.totalSavingEur = premiumsEur + g.dividendsEur
     if (g.shares > 0 && g.totalInvestedEur > 0) {
-      g.effectiveCostPerShare = (g.totalInvestedEur - premiumsEur) / g.shares
-      g.totalSavingEur = premiumsEur
+      g.effectiveCostPerShare = (g.totalInvestedEur - g.totalSavingEur) / g.shares
     }
     g.trades.sort((a, b) => b.date.localeCompare(a.date))
   })
 
-  const result: TickerGroup[] = []
-  groups.forEach(g => result.push(g))
-  return result
-    .filter(g => g.shares > 0 || g.trades.length > 0)
+  return Array.from(groups.values())
+    .filter(g => g.shares > 0 || g.trades.length > 0 || g.dividendsEur !== 0)
     .sort((a, b) => b.totalInvestedEur - a.totalInvestedEur)
 }
 
@@ -124,7 +133,7 @@ function NoteEditor({ id }: { id: string }) {
 
 function TickerCard({ g }: { g: TickerGroup }) {
   const [expanded, setExpanded] = useState(false)
-  const hasSaving = g.totalSavingEur > 0.01
+  const hasSaving = g.totalSavingEur > 0.01 && g.shares > 0
   const saving = g.avgCostEur - g.effectiveCostPerShare
   const savingPct = g.avgCostEur > 0 ? (saving / g.avgCostEur) * 100 : 0
 
@@ -154,7 +163,12 @@ function TickerCard({ g }: { g: TickerGroup }) {
               <div>
                 <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>P&L opciones neto</div>
                 <div style={{ fontWeight: 600, fontSize: 15, color: g.totalPremiumsUSD >= 0 ? "var(--green)" : "var(--red)" }}>{g.totalPremiumsUSD >= 0 ? "+" : ""}{fmt(g.totalPremiumsUSD)} $</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>≈ {fmt(g.totalSavingEur)} €</div>
+              </div>
+            )}
+            {g.dividendsEur !== 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>Dividendos cobrados</div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: "var(--green)" }}>+{fmt(g.dividendsEur)} €</div>
               </div>
             )}
             {hasSaving && (
@@ -234,14 +248,31 @@ function TickerCard({ g }: { g: TickerGroup }) {
 }
 
 export default function BitacoraPage() {
-  const { positions } = usePortfolio()
-  const { importedTrades, meta: ibMeta } = useImportedTrades()
+  const trades = useAllTrades()
+  const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
+  const [degiroPositions, setDegiroPositions] = useState<Position[]>([])
+  const [dividends, setDividends] = useState<ImportedDividend[]>([])
 
-  const isDemo = !ibMeta && positions.length === 0
+  useEffect(() => {
+    fetch("/api/ibkr", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => d && setSnapshot(d))
+      .catch(() => null)
+  }, [])
 
-  // Use real data or demo trades as fallback
-  const trades = ibMeta ? importedTrades : demoTrades
-  const groups = buildGroups(positions, trades)
+  useEffect(() => {
+    function refresh() {
+      setDegiroPositions(buildDeGiroPositions(loadImportedStockTxns()))
+      setDividends(loadImportedDividends())
+    }
+    refresh()
+    window.addEventListener("storage", refresh)
+    return () => window.removeEventListener("storage", refresh)
+  }, [])
+
+  const positions = useMemo(() => [...(snapshot?.positions ?? []), ...degiroPositions], [snapshot, degiroPositions])
+  const hasStockData = positions.some(p => p.assetClass === "STK")
+  const groups = useMemo(() => buildGroups(positions, trades, dividends), [positions, trades, dividends])
 
   return (
     <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -251,14 +282,14 @@ export default function BitacoraPage() {
         </span>
         <h1 style={{ fontSize: 30, margin: "6px 0 4px" }}>Bitácora</h1>
         <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>
-          Precio medio de compra reducido por las primas capturadas vendiendo calls y puts sobre cada acción.
-          {isDemo && <span style={{ marginLeft: 8, color: "var(--amber)" }}>· Datos demo — importa tus cuentas en Cartera</span>}
+          Precio medio de compra reducido por las primas capturadas vendiendo calls y puts, y por los dividendos cobrados, sobre cada acción.
+          {!hasStockData && <span style={{ marginLeft: 8, color: "var(--amber)" }}>· Importa tus posiciones de acciones en Cartera → Importar para calcular el coste efectivo</span>}
         </p>
       </header>
 
       {groups.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)", fontSize: 14 }}>
-          Importa tus datos desde la Cartera para ver el cálculo de coste efectivo.
+          Importa tus datos desde Cartera → Importar para ver el cálculo de coste efectivo.
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

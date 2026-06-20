@@ -288,6 +288,7 @@ export interface ImportedDividend {
   amount: number     // positive only (skip withholding tax lines)
   currency: string
   description: string
+  isin?: string       // present for DeGiro account-statement dividends
 }
 
 export function parseIBKRDividends(csv: string): ImportedDividend[] {
@@ -387,6 +388,8 @@ export function parseDeGiroDividends(csv: string): ImportedDividend[] {
     const product = (c[3] || "").trim()
     if (!product) continue
 
+    const isin = (c[4] || "").trim()
+
     const date = toISO(c[0] || "")
     if (!date) continue
 
@@ -394,7 +397,7 @@ export function parseDeGiroDividends(csv: string): ImportedDividend[] {
     const amount = parseFloat((c[8] || "").replace(",", "."))
     if (isNaN(amount) || amount <= 0) continue
 
-    out.push({ date, company: product, amount, currency, description: product })
+    out.push({ date, company: product, amount, currency, description: product, isin: isin || undefined })
   }
 
   return out.sort((a, b) => a.date.localeCompare(b.date))
