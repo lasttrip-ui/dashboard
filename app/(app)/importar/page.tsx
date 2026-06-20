@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, type Broker, type ImportedExecution, type ImportedDividend } from "@/lib/import-parser"
+import { parseCSV, detectBroker, parseIBKRExecutions, parseIBKRDividends, parseDeGiroDividends, type Broker, type ImportedExecution, type ImportedDividend } from "@/lib/import-parser"
 import { loadImported, saveImported, clearImported, loadImportedExecs, saveImportedExecs, clearImportedExecs, loadImportedDividends, saveImportedDividends, clearImportedDividends, mergeImportedDividends } from "@/lib/trade-store"
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
@@ -35,11 +35,10 @@ const INSTRUCTIONS: Record<Broker, { steps: string[]; note: string }> = {
   },
   DeGiro: {
     steps: [
-      "En DeGiro → Actividad → Transacciones",
-      "Filtra por período y tipo: Opciones",
-      "Exportar → CSV",
+      "Opciones: DeGiro → Actividad → Transacciones → filtra por Opciones → Exportar CSV",
+      "Dividendos: DeGiro → Actividad → Cuenta → Exportar CSV (extracto de cuenta)",
     ],
-    note: "Asegúrate de exportar en formato estándar (no PDF).",
+    note: "Puedes subir ambos archivos por separado: el de Transacciones añade tus operaciones con opciones, y el de cuenta añade los dividendos cobrados a Cartera → Dividendos.",
   },
 }
 
@@ -70,9 +69,9 @@ export default function ImportPage() {
       if (detectedBroker !== broker) setBroker(detectedBroker)
       const result = parseCSV(text, detectedBroker)
       const execs = detectedBroker === "IBKR" ? parseIBKRExecutions(text) : []
-      const divs = detectedBroker === "IBKR" ? parseIBKRDividends(text) : []
+      const divs = detectedBroker === "IBKR" ? parseIBKRDividends(text) : parseDeGiroDividends(text)
       if (result.length === 0 && execs.length === 0 && divs.length === 0) {
-        setError("No se encontraron movimientos en el archivo. Comprueba que es un extracto de actividad de IBKR (con la sección «Operaciones») o un export de transacciones de DeGiro.")
+        setError("No se encontraron movimientos en el archivo. Comprueba que es un extracto de actividad de IBKR (con la sección «Operaciones»), un export de transacciones de DeGiro, o un extracto de cuenta de DeGiro con dividendos.")
       } else {
         if (result.length > 0) setParsed(result)
         if (execs.length > 0) setParsedExecs(execs)

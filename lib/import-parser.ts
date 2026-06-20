@@ -324,6 +324,37 @@ export function parseIBKRDividends(csv: string): ImportedDividend[] {
   return out.sort((a, b) => a.date.localeCompare(b.date))
 }
 
+// ── DeGiro Account statement CSV (cash movements) ─────────────────────────────
+// Columnas: Fecha, Hora, Fecha valor, Producto, ISIN, Descripción, Tipo, [ccy, Variación], [ccy, Saldo], ID Orden
+// La fila de "Dividendo" trae el importe bruto; "Retención del dividendo" es la retención (negativa) y se ignora.
+
+export function parseDeGiroDividends(csv: string): ImportedDividend[] {
+  const out: ImportedDividend[] = []
+  const lines = csv.split(/\r?\n/)
+
+  for (let i = 1; i < lines.length; i++) {
+    const c = parseLine(lines[i])
+    if (c.length < 9) continue
+
+    const description = (c[5] || "").trim()
+    if (description.toLowerCase() !== "dividendo" && description.toLowerCase() !== "dividend") continue
+
+    const product = (c[3] || "").trim()
+    if (!product) continue
+
+    const date = toISO(c[0] || "")
+    if (!date) continue
+
+    const currency = (c[7] || "EUR").trim()
+    const amount = parseFloat((c[8] || "").replace(",", "."))
+    if (isNaN(amount) || amount <= 0) continue
+
+    out.push({ date, company: product, amount, currency, description: product })
+  }
+
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
 // ── Auto-detect broker ────────────────────────────────────────────────────────
 
 export function detectBroker(csv: string): Broker {

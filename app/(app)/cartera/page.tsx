@@ -335,8 +335,9 @@ function DividendosTab() {
   }, [])
 
   const yearData = useMemo<DividendEntry[]>(() => {
-    if (year === CURRENT_YEAR) return DIVIDEND_DATA_2026
-    return importedDivsToEntries(importedDivs, year)
+    const imported = importedDivsToEntries(importedDivs, year)
+    if (year === CURRENT_YEAR) return [...DIVIDEND_DATA_2026, ...imported]
+    return imported
   }, [year, importedDivs])
 
   const monthlyData = useMemo(() => buildMonthlyDividends(yearData), [yearData])
