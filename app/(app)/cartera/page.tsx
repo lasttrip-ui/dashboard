@@ -43,11 +43,31 @@ function strategyForPosition(p: Position): string {
   return `${dir} ${type}`
 }
 
-function PositionesTab({ positions, balances }: { positions: Position[]; balances: Balance[] }) {
+// Multi-currency aggregation: a portfolio can hold positions in USD, EUR, GBP
+// and HKD at once, so summing raw market values is meaningless. Convert each to
+// the account base currency (EUR) first. IBKR's snapshot carries an
+// exchangeRate per currency (native → base); DeGiro positions reuse those
+// rates, with fallbacks for any currency the snapshot doesn't include.
+const FALLBACK_RATES: Record<string, number> = { EUR: 1, USD: 0.92, GBP: 1.17, HKD: 0.118 }
+
+function buildRateFor(balances: Balance[]): (ccy: string) => number {
+  const map = new Map<string, number>()
+  for (const b of balances) {
+    if (b.currency !== "BASE" && b.exchangeRate > 0) map.set(b.currency, b.exchangeRate)
+  }
+  return (ccy: string) => map.get(ccy) ?? FALLBACK_RATES[ccy] ?? 1
+}
+
+function currencySymbol(ccy: string): string {
+  return ccy === "EUR" ? "€" : ccy === "GBP" ? "£" : ccy === "HKD" ? "HK$" : "$"
+}
+
+function PositionesTab({ positions, balances, baseCurrency }: { positions: Position[]; balances: Balance[]; baseCurrency: string }) {
   const [filter, setFilter] = useState<PositionFilter>("todas")
   const [sortKey, setSortKey] = useState<PosSortKey>("value")
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const { live, lastUpdate } = useLiveQuotes(positions)
+  const rateFor = useMemo(() => buildRateFor(balances), [balances])
 
   function fmt(n: number, d = 2) {
     return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -58,7 +78,17 @@ function PositionesTab({ positions, balances }: { positions: Position[]; balance
     else { setSortKey(key); setSortDir("desc") }
   }
 
-  const portfolioTotal = positions.reduce((s, p) => s + Math.abs(p.marketValue), 0)
+  // Value of a position in the account base currency (for totals and weights).
+  function baseValue(p: Position): number {
+    const v = live.get(p.contractId)?.marketValue ?? p.marketValue
+    return Math.abs(v) * rateFor(p.currency)
+  }
+
+  const portfolioTotal = useMemo(
+    () => positions.reduce((s, p) => s + baseValue(p), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [positions, live, rateFor]
+  )
 
   const filtered = useMemo(() => {
     let result = [...positions]
@@ -84,7 +114,7 @@ function PositionesTab({ positions, balances }: { positions: Position[]; balance
 
   const stats = {
     count: filtered.length,
-    value: filtered.reduce((s, p) => s + Math.abs(live.get(p.contractId)?.marketValue ?? p.marketValue), 0),
+    value: filtered.reduce((s, p) => s + baseValue(p), 0),
   }
 
   const tabs: { key: PositionFilter; label: string }[] = [
@@ -123,7 +153,7 @@ function PositionesTab({ positions, balances }: { positions: Position[]; balance
       {filter !== "efectivo" && (
         <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
           <span>POSICIONES <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>{stats.count}</span></span>
-          <span>VALOR DE MERCADO TOTAL <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>${fmt(stats.value)}</span></span>
+          <span>VALOR DE MERCADO TOTAL <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>{currencySymbol(baseCurrency)}{fmt(stats.value)}</span></span>
         </div>
       )}
 
@@ -175,7 +205,7 @@ function PositionesTab({ positions, balances }: { positions: Position[]; balance
                 const upnl = lq?.unrealizedPnl ?? p.unrealizedPnl
                 const cost = value - upnl
                 const pctPnl = cost !== 0 ? (upnl / Math.abs(cost)) * 100 : 0
-                const pctCartera = portfolioTotal > 0 ? (Math.abs(value) / portfolioTotal) * 100 : 0
+                const pctCartera = portfolioTotal > 0 ? (baseValue(p) / portfolioTotal) * 100 : 0
                 const dte = p.assetClass === "OPT" && p.expiration ? dteRemaining(p.expiration) : null
                 return (
                   <tr key={p.contractId}>
@@ -247,16 +277,19 @@ function HeatmapCell(props: any) {
   )
 }
 
-function HeatmapTab({ positions }: { positions: Position[] }) {
+function HeatmapTab({ positions, balances }: { positions: Position[]; balances: Balance[] }) {
+  const rateFor = useMemo(() => buildRateFor(balances), [balances])
   const data = useMemo(() => {
     return positions
       .filter(p => p.marketValue !== 0)
       .map(p => {
         const cost = p.marketValue - p.unrealizedPnl
         const pct = cost !== 0 ? (p.unrealizedPnl / Math.abs(cost)) * 100 : 0
-        return { name: p.symbol, size: Math.abs(p.marketValue), pct }
+        // Cell size compares positions against each other, so normalise to the
+        // base currency — otherwise a HK$ holding dwarfs a same-value $ holding.
+        return { name: p.symbol, size: Math.abs(p.marketValue) * rateFor(p.currency), pct }
       })
-  }, [positions])
+  }, [positions, rateFor])
 
   const winners = data.filter(d => d.pct > 0).length
   const losers = data.filter(d => d.pct < 0).length
@@ -759,8 +792,8 @@ export default function CarteraPage() {
 
       {/* Content */}
       {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} />}
-      {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} />}
-      {tab === "mapa"       && <HeatmapTab positions={allPositions} />}
+      {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} baseCurrency={snapshot?.summary.currency ?? "EUR"} />}
+      {tab === "mapa"       && <HeatmapTab positions={allPositions} balances={snapshot?.balances ?? []} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>
   )
