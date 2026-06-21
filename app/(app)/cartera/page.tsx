@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Treemap,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AreaChart, Area,
 } from "recharts"
 import { Info } from "lucide-react"
@@ -30,7 +30,7 @@ import type { OptionTrade } from "@/lib/data"
 
 const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
 
-type Tab = "cartera" | "posiciones" | "mapa" | "dividendos"
+type Tab = "cartera" | "posiciones" | "dividendos"
 
 // ── Positions sub-tab ────────────────────────────────────────────────────────
 
@@ -247,96 +247,6 @@ function PositionesTab({ positions, balances, baseCurrency }: { positions: Posit
           </table>
         </div>
       )}
-    </div>
-  )
-}
-
-// ── Heatmap sub-tab ──────────────────────────────────────────────────────────
-
-function colorForPct(pct: number): string {
-  const capped = Math.max(-20, Math.min(20, pct))
-  const t = Math.abs(capped) / 20
-  return pct >= 0 ? `rgba(34,197,94,${0.25 + t * 0.55})` : `rgba(239,68,68,${0.25 + t * 0.55})`
-}
-
-function HeatmapCell(props: any) {
-  const { x, y, width, height, name, pct } = props
-  if (width < 2 || height < 2) return null
-  const showText = width > 42 && height > 30
-  return (
-    <g>
-      <rect x={x} y={y} width={width} height={height} style={{ fill: colorForPct(pct), stroke: "var(--bg-card)", strokeWidth: 2 }} />
-      {showText && (
-        <>
-          <text x={x + width / 2} y={y + height / 2 - 5} textAnchor="middle" fill="#fff" fontSize={12} fontWeight={700}>{name}</text>
-          <text x={x + width / 2} y={y + height / 2 + 11} textAnchor="middle" fill="#fff" fontSize={11}>
-            {pct >= 0 ? "+" : ""}{pct.toFixed(1)}%
-          </text>
-        </>
-      )}
-    </g>
-  )
-}
-
-function HeatmapTab({ positions, balances }: { positions: Position[]; balances: Balance[] }) {
-  const rateFor = useMemo(() => buildRateFor(balances), [balances])
-  const data = useMemo(() => {
-    return positions
-      .filter(p => p.marketValue !== 0)
-      .map(p => {
-        const cost = p.marketValue - p.unrealizedPnl
-        const pct = cost !== 0 ? (p.unrealizedPnl / Math.abs(cost)) * 100 : 0
-        // Cell size compares positions against each other, so normalise to the
-        // base currency — otherwise a HK$ holding dwarfs a same-value $ holding.
-        return { name: p.symbol, size: Math.abs(p.marketValue) * rateFor(p.currency), pct }
-      })
-  }, [positions, rateFor])
-
-  const winners = data.filter(d => d.pct > 0).length
-  const losers = data.filter(d => d.pct < 0).length
-
-  if (data.length === 0) {
-    return (
-      <div className="card" style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>
-        Sin posiciones para mostrar.
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div className="card" style={{ padding: "0.875rem 1rem" }}>
-        <div style={{ fontSize: "0.9375rem", fontWeight: 700, marginBottom: 2 }}>Mapa de calor</div>
-        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          Tamaño de celda = porcentaje del valor de mercado de la cartera. Color = P&L no realizado frente al coste.
-        </div>
-      </div>
-
-      <div style={{ display: "flex", gap: "1.5rem", alignItems: "center", flexWrap: "wrap" }}>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          POSICIONES <span className="num" style={{ color: "var(--text-primary)", fontWeight: 700 }}>{data.length}</span>
-        </span>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          GANADORAS <span className="num" style={{ color: "var(--green)", fontWeight: 700 }}>{winners}</span>
-        </span>
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          PERDEDORAS <span className="num" style={{ color: "var(--red)", fontWeight: 700 }}>{losers}</span>
-        </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", marginLeft: "auto" }}>
-          {[-20, -10, -3, 3, 10, 20].map(v => (
-            <div key={v} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              <div style={{ width: 22, height: 10, borderRadius: 2, background: colorForPct(v) }} />
-              <span style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>{v > 0 ? `+${v}` : v}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: "0.75rem" }}>
-        <ResponsiveContainer width="100%" height={420}>
-          <Treemap data={data} dataKey="size" stroke="var(--bg-card)" content={<HeatmapCell />} isAnimationActive={false} />
-        </ResponsiveContainer>
-      </div>
     </div>
   )
 }
@@ -771,7 +681,6 @@ export default function CarteraPage() {
   const TABS: { key: Tab; label: string }[] = [
     { key: "cartera",    label: "Seguimiento de Cartera" },
     { key: "posiciones", label: "Posiciones" },
-    { key: "mapa",       label: "Mapa de calor" },
     { key: "dividendos", label: "Dividendos" },
   ]
 
@@ -804,7 +713,6 @@ export default function CarteraPage() {
       {/* Content */}
       {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} />}
       {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} baseCurrency={snapshot?.summary.currency ?? "EUR"} />}
-      {tab === "mapa"       && <HeatmapTab positions={allPositions} balances={snapshot?.balances ?? []} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>
   )
