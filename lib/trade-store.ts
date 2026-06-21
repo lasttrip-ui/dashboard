@@ -1,4 +1,5 @@
 import type { OptionTrade } from "./data"
+import { scheduleSyncPush } from "./sync"
 
 const KEY = "tt-imported-trades"
 
@@ -14,10 +15,12 @@ export function loadImported(): OptionTrade[] {
 
 export function saveImported(trades: OptionTrade[]): void {
   localStorage.setItem(KEY, JSON.stringify(trades))
+  scheduleSyncPush()
 }
 
 export function clearImported(): void {
   localStorage.removeItem(KEY)
+  scheduleSyncPush()
 }
 
 export function mergeImported(base: OptionTrade[], imported: OptionTrade[]): OptionTrade[] {
@@ -45,6 +48,7 @@ export function saveOverride(id: string, patch: Partial<OptionTrade>): void {
   const all = loadOverrides()
   all[id] = { ...all[id], ...patch }
   localStorage.setItem(OVERRIDES_KEY, JSON.stringify(all))
+  scheduleSyncPush()
 }
 
 export function loadDeletedIds(): string[] {
@@ -61,6 +65,7 @@ export function markDeleted(id: string): void {
   const ids = new Set(loadDeletedIds())
   ids.add(id)
   localStorage.setItem(DELETED_KEY, JSON.stringify(Array.from(ids)))
+  scheduleSyncPush()
 }
 
 export function applyOverridesAndDeletions(trades: OptionTrade[]): OptionTrade[] {
@@ -89,10 +94,12 @@ export function loadImportedExecs(): ImportedExecution[] {
 
 export function saveImportedExecs(execs: ImportedExecution[]): void {
   localStorage.setItem(EXEC_KEY, JSON.stringify(execs))
+  scheduleSyncPush()
 }
 
 export function clearImportedExecs(): void {
   localStorage.removeItem(EXEC_KEY)
+  scheduleSyncPush()
 }
 
 // ── Imported dividends ────────────────────────────────────────────────────────
@@ -113,10 +120,12 @@ export function loadImportedDividends(): ImportedDividend[] {
 
 export function saveImportedDividends(divs: ImportedDividend[]): void {
   localStorage.setItem(DIV_KEY, JSON.stringify(divs))
+  scheduleSyncPush()
 }
 
 export function clearImportedDividends(): void {
   localStorage.removeItem(DIV_KEY)
+  scheduleSyncPush()
 }
 
 export function mergeImportedDividends(base: ImportedDividend[], incoming: ImportedDividend[]): ImportedDividend[] {
@@ -144,8 +153,10 @@ export function loadImportedStockTxns(): ImportedStockTransaction[] {
 
 export function saveImportedStockTxns(txns: ImportedStockTransaction[]): void {
   localStorage.setItem(STOCK_TXN_KEY, JSON.stringify(txns))
+  scheduleSyncPush()
 }
 
 export function clearImportedStockTxns(): void {
   localStorage.removeItem(STOCK_TXN_KEY)
+  scheduleSyncPush()
 }

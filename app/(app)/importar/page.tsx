@@ -6,6 +6,7 @@ import { loadImported, saveImported, clearImported, loadImportedExecs, saveImpor
 import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
+import SyncSettings from "@/components/SyncSettings"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,9 @@ export default function ImportPage() {
           Sube tu extracto CSV de IBKR o DeGiro y el dashboard lo procesará automáticamente.
         </p>
       </div>
+
+      {/* Cross-device sync */}
+      <SyncSettings />
 
       {/* Broker selector */}
       <div className="card" style={{ padding: "1rem" }}>
