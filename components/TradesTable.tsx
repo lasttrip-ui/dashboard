@@ -5,6 +5,7 @@ import { OptionTrade } from "@/lib/data"
 import { Pencil, Trash2 } from "lucide-react"
 import {
   filterByMonth,
+  filterByYear,
   dteRemaining,
   dteProgress,
   pctPrimaCap,
@@ -20,12 +21,16 @@ import { markDeleted } from "@/lib/trade-store"
 type StatusFilter = "todos" | "abiertos" | "cerrados"
 type StrategyFilter = "todos" | "Put" | "Call"
 type SortDir = "asc" | "desc"
+type ViewMode = "mes" | "anio" | "todo"
 
 interface TradesTableProps {
   trades: OptionTrade[]
+  viewMode: ViewMode
   viewYear: number
   viewMonth: number
+  onModeChange: (mode: ViewMode) => void
   onMonthChange: (year: number, month: number) => void
+  onYearChange: (year: number) => void
   onEdit?: (trade: OptionTrade) => void
 }
 
@@ -40,7 +45,7 @@ const navBtnStyle: React.CSSProperties = {
   lineHeight: 1.5,
 }
 
-export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange, onEdit }: TradesTableProps) {
+export default function TradesTable({ trades, viewMode, viewYear, viewMonth, onModeChange, onMonthChange, onYearChange, onEdit }: TradesTableProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("todos")
   const [tickerFilter, setTickerFilter] = useState<string>("todos")
   const [strategyFilter, setStrategyFilter] = useState<StrategyFilter>("todos")
@@ -48,7 +53,11 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
   const [tickerOpen, setTickerOpen] = useState(false)
   const [strategyOpen, setStrategyOpen] = useState(false)
 
-  const monthTrades = filterByMonth(trades, viewYear, viewMonth)
+  const monthTrades = viewMode === "mes"
+    ? filterByMonth(trades, viewYear, viewMonth)
+    : viewMode === "anio"
+      ? filterByYear(trades, viewYear)
+      : trades
 
   // Get unique tickers for dropdown
   const uniqueTickers = useMemo(() => {
@@ -86,17 +95,27 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
   }, 0)
 
   function navigate(dir: -1 | 1) {
-    let m = viewMonth + dir
-    let y = viewYear
-    if (m < 1) { m = 12; y-- }
-    if (m > 12) { m = 1; y++ }
-    onMonthChange(y, m)
+    if (viewMode === "mes") {
+      let m = viewMonth + dir
+      let y = viewYear
+      if (m < 1) { m = 12; y-- }
+      if (m > 12) { m = 1; y++ }
+      onMonthChange(y, m)
+    } else if (viewMode === "anio") {
+      onYearChange(viewYear + dir)
+    }
   }
 
   const tabs: { key: StatusFilter; label: string }[] = [
     { key: "todos", label: "Todos" },
     { key: "abiertos", label: "Abiertos" },
     { key: "cerrados", label: "Cerrados" },
+  ]
+
+  const modeOptions: { key: ViewMode; label: string }[] = [
+    { key: "mes", label: "Mes" },
+    { key: "anio", label: "Año" },
+    { key: "todo", label: "Todo" },
   ]
 
   return (
@@ -114,13 +133,38 @@ export default function TradesTable({ trades, viewYear, viewMonth, onMonthChange
         <span style={{ fontSize: "0.8125rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-secondary)" }}>
           TRADES
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          <button onClick={() => navigate(-1)} style={navBtnStyle}>{"<"}</button>
-          <span style={{ fontSize: "0.8125rem", fontWeight: 600, minWidth: "110px", textAlign: "center" }}>
-            {MONTH_NAMES_ES[viewMonth - 1]} {viewYear}
-          </span>
-          <button onClick={() => navigate(1)} style={navBtnStyle}>{">"}</button>
+        {/* Mode toggle */}
+        <div style={{ display: "flex", gap: "2px", background: "var(--bg-primary)", borderRadius: "8px", padding: "2px" }}>
+          {modeOptions.map(m => (
+            <button
+              key={m.key}
+              onClick={() => onModeChange(m.key)}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "6px",
+                border: "none",
+                background: viewMode === m.key ? "var(--bg-card)" : "transparent",
+                color: viewMode === m.key ? "var(--text-primary)" : "var(--text-muted)",
+                fontSize: "0.8125rem",
+                cursor: "pointer",
+                fontWeight: viewMode === m.key ? 600 : 400,
+                boxShadow: viewMode === m.key ? "0 1px 3px rgba(0,0,0,0.2)" : "none",
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
         </div>
+
+        {viewMode !== "todo" && (
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <button onClick={() => navigate(-1)} style={navBtnStyle}>{"<"}</button>
+            <span style={{ fontSize: "0.8125rem", fontWeight: 600, minWidth: "110px", textAlign: "center" }}>
+              {viewMode === "mes" ? `${MONTH_NAMES_ES[viewMonth - 1]} ${viewYear}` : viewYear}
+            </span>
+            <button onClick={() => navigate(1)} style={navBtnStyle}>{">"}</button>
+          </div>
+        )}
 
         {/* Status tabs */}
         <div style={{ display: "flex", gap: "2px", background: "var(--bg-primary)", borderRadius: "8px", padding: "2px" }}>

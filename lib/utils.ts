@@ -310,6 +310,10 @@ export function filterByMonth(allTrades: OptionTrade[], year: number, month: num
   return allTrades.filter(t => t.date.startsWith(ym))
 }
 
+export function filterByYear(allTrades: OptionTrade[], year: number): OptionTrade[] {
+  return allTrades.filter(t => t.date.startsWith(String(year)))
+}
+
 export const MONTH_NAMES_ES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
