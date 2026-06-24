@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { cumulativePnlData, navHistoryData } from "@/lib/data"
+import { navHistoryData } from "@/lib/data"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByPeriod, filterByMonth, filterByDateRange, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
 import { usdToEur } from "@/lib/currency"
@@ -58,52 +58,6 @@ function AccountSummary({ snapshot }: { snapshot: IBKRSnapshot | null }) {
             </div>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-// ── P&L Accumulated Chart ─────────────────────────────────────────────────────
-
-function PnlAccumulatedCard({ totalPnl, periodLabel, period }: { totalPnl: number; periodLabel: string; period: PeriodKey }) {
-  const color = totalPnl >= 0 ? "#22c55e" : "#ef4444"
-  const today = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
-
-  // Build a cumulative chart from the cumulative data
-  const chartData = cumulativePnlData
-
-  return (
-    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.25rem" }}>
-        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-          P&L Acumulado
-        </div>
-        <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
-          {period === "todo" ? "2021" : period === "anio" ? "01/01/2026" : "Este mes"} → {today}
-        </div>
-      </div>
-      <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1, marginBottom: "0.5rem" }}>
-        {totalPnl >= 0 ? "+" : ""}€{usdToEur(totalPnl).toFixed(2).replace(".", ",")}
-      </div>
-      <div style={{ flex: 1, minHeight: 100 }}>
-        <ResponsiveContainer width="100%" height={110}>
-          <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-            <defs>
-              <linearGradient id="grad_pos" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="date" tick={{ fontSize: 9, fill: "var(--text-muted)" }} tickLine={false} axisLine={false}
-              tickFormatter={v => v.replace(/^\d{4}-/, "")} />
-            <YAxis hide domain={["auto", "auto"]} />
-            <Tooltip
-              contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-              formatter={(v: number) => [`€${usdToEur(v).toFixed(2)}`, "P&L"]}
-            />
-            <Area type="monotone" dataKey="pnl" stroke={color} strokeWidth={2} fill="url(#grad_pos)" dot={false} />
-          </AreaChart>
-        </ResponsiveContainer>
       </div>
     </div>
   )
@@ -345,15 +299,6 @@ export default function PanelPage() {
     : filterByPeriod(trades, period)
   const stats = calcStats(periodTrades)
 
-  const PERIOD_LABELS: Record<PeriodKey, string> = {
-    hoy: "Hoy",
-    semana: "Esta semana",
-    mes: "Este mes",
-    anio: "Este año",
-    todo: "Total",
-    custom: "Período personalizado",
-  }
-
   return (
     <div style={{ padding: "1.5rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
       {/* Page header */}
@@ -373,8 +318,8 @@ export default function PanelPage() {
         />
       </div>
 
-      {/* Row 1: 4-col KPI grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 0.85fr 1.1fr 1.4fr", gap: "0.875rem", alignItems: "stretch" }}>
+      {/* Row 1: KPI grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 0.85fr 1.1fr", gap: "0.875rem", alignItems: "stretch" }}>
         <AccountSummary snapshot={snapshot} />
 
         {/* Factor de Beneficio */}
@@ -408,9 +353,6 @@ export default function PanelPage() {
             {stats.tradeCount} operaciones
           </div>
         </div>
-
-        {/* P&L Acumulado */}
-        <PnlAccumulatedCard totalPnl={stats.totalPnl} periodLabel={PERIOD_LABELS[period]} period={period} />
       </div>
 
       {/* Row 2: Full NAV History */}
