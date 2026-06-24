@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { loadImportedStockTxns, loadImportedDividends } from "@/lib/trade-store"
-import { buildDeGiroPositions, ISIN_TICKER } from "@/lib/degiro-positions"
+import { buildDeGiroPositions } from "@/lib/degiro-positions"
 import { usdToEur } from "@/lib/currency"
 import { useTradeNotes } from "@/lib/notes"
 import type { OptionTrade } from "@/lib/data"
@@ -21,10 +21,6 @@ function toEur(amount: number, currency: string): number {
   if (currency === "GBP") return amount * 1.17
   if (currency === "EUR") return amount
   return usdToEur(amount)
-}
-
-function tickerKey(s: string): string {
-  return s.toUpperCase().split(/\s+/)[0]
 }
 
 function netPremium(t: OptionTrade): number {
@@ -73,8 +69,7 @@ function buildGroups(positions: Position[], trades: OptionTrade[], dividends: Im
   }
 
   for (const d of dividends) {
-    const ticker = (d.isin && ISIN_TICKER[d.isin]) || tickerKey(d.company)
-    const g = ensure(ticker)
+    const g = ensure(d.company.toUpperCase())
     g.dividendsEur += toEur(d.amount, d.currency)
   }
 

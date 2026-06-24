@@ -1,4 +1,5 @@
 import type { OptionTrade } from "./data"
+import { resolveTicker } from "./ticker-resolve"
 
 export type Broker = "IBKR" | "DeGiro"
 
@@ -120,7 +121,7 @@ function parseDeGiroProduct(product: string): { ticker: string; type: "Put" | "C
     const year = yy.length === 2 ? "20" + yy : yy
     // DeGiro uses DD/MM/YY
     const expiration = `${year}-${mm2.padStart(2, "0")}-${dd.padStart(2, "0")}`
-    const ticker = product.split(/\s+/)[0].toUpperCase()
+    const ticker = resolveTicker(product)
     return { ticker, type: cp === "CALL" ? "Call" : "Put", expiration }
   }
   // Alternative: "PUT OPTION ON AAPL ..."
@@ -316,7 +317,7 @@ export function parseIBKRDividends(csv: string): ImportedDividend[] {
 
     // Extract ticker: "VICI PROPERTIES INC(US...) Cash Dividend..." → "VICI"
     const beforeParen = description.split("(")[0].trim()
-    const company = beforeParen.split(/\s+/)[0].toUpperCase()
+    const company = resolveTicker(beforeParen)
     if (!company) continue
 
     out.push({ date, company, amount, currency, description })
@@ -403,7 +404,8 @@ export function parseDeGiroDividends(csv: string): ImportedDividend[] {
     const amount = parseFloat((c[8] || "").replace(",", "."))
     if (isNaN(amount) || amount <= 0) continue
 
-    out.push({ date, company: product, amount, currency, description: product, isin: isin || undefined })
+    const company = resolveTicker(product, isin)
+    out.push({ date, company, amount, currency, description: product, isin: isin || undefined })
   }
 
   return out.sort((a, b) => a.date.localeCompare(b.date))
