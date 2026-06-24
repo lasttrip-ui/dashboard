@@ -33,7 +33,14 @@ jobs:
           git add lib/ibkr-snapshot.json public/data/executions-history.json
           if git diff --cached --quiet; then
             echo "No changes"
-          else
-            git commit -m "Daily IBKR data update ($(date -u +%Y-%m-%d))"
-            git push
+            exit 0
           fi
+          git commit -m "Daily IBKR data update ($(date -u +%Y-%m-%d))"
+          for i in 1 2 3 4 5; do
+            git fetch origin "$GITHUB_REF_NAME"
+            git rebase "origin/$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 5))
+          done
+          echo "::error::Failed to push after retries"
+          exit 1
