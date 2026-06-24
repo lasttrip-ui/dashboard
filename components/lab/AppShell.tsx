@@ -33,7 +33,7 @@ const NAV: NavItem[] = [
   { href: "/panel", label: "Panel", icon: LayoutGrid },
   { href: "/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/cartera", label: "Cartera", icon: Briefcase },
-  { href: "/operativa", label: "Operativa", icon: CandlestickChart },
+  { href: "/operaciones", label: "Operativa", icon: CandlestickChart },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen },
 ]
 
@@ -162,7 +162,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                   <Link href="/favoritos" style={menuLink}><Bookmark size={15} strokeWidth={1.75} /> Favoritos</Link>
-                  <Link href="/operativa" style={menuLink}><CandlestickChart size={15} strokeWidth={1.75} /> Mi operativa</Link>
+                  <Link href="/operaciones" style={menuLink}><CandlestickChart size={15} strokeWidth={1.75} /> Mi operativa</Link>
                 </div>
               )}
             </div>

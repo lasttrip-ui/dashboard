@@ -34,7 +34,6 @@ export default function OperacionesPage() {
 
   const monthTrades = filterByMonth(trades, viewYear, viewMonth)
   const stats = calcStats(monthTrades)
-  const closedMonth = monthTrades.filter(t => t.status === "closed")
   const totalTrades = trades.length
 
   return (

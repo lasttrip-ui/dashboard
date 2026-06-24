@@ -7,6 +7,8 @@ import type { OptionTrade } from "@/lib/data"
 import { Upload, FileText, Trash2, CheckCircle, AlertCircle, Info } from "lucide-react"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
 import SyncSettings from "@/components/SyncSettings"
+import IBFlexImport from "@/components/IBFlexImport"
+import type { IBFlexResult } from "@/lib/ibflex"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +61,8 @@ export default function ImportPage() {
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(null)
+  const [flexWarnings, setFlexWarnings] = useState<string[]>([])
+  const [flexImportedCount, setFlexImportedCount] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   function processFile(file: File) {
@@ -138,6 +142,18 @@ export default function ImportPage() {
     setFileName(null)
   }
 
+  function handleFlexImport(result: IBFlexResult) {
+    setFlexWarnings(result.warnings)
+    if (result.trades.length === 0) return
+    const current = loadImported()
+    const ids = new Set(current.map(t => t.id))
+    const newOnes = result.trades.filter(t => !ids.has(t.id))
+    const merged = [...current, ...newOnes]
+    saveImported(merged)
+    setSaved(merged)
+    setFlexImportedCount(newOnes.length)
+  }
+
   function handleClear() {
     clearImported()
     clearImportedExecs()
@@ -187,6 +203,31 @@ export default function ImportPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* IB Flex Query automation */}
+      <div className="card" style={{ padding: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+          <div>
+            <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>
+              Automatizar con Flex Query (IBKR)
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 2 }}>
+              Sube el XML de una Flex Query de IB (o intenta la conexión directa) en vez de exportar e importar el CSV a mano.
+            </div>
+          </div>
+          <IBFlexImport onImport={handleFlexImport} />
+        </div>
+        {flexImportedCount !== null && flexImportedCount > 0 && (
+          <div style={{ marginTop: "0.625rem", fontSize: "0.8125rem", color: "var(--green)" }}>
+            {flexImportedCount} operaciones nuevas importadas desde la Flex Query.
+          </div>
+        )}
+        {flexWarnings.length > 0 && (
+          <div style={{ marginTop: "0.625rem", fontSize: "0.75rem", color: "var(--amber)" }}>
+            {flexWarnings.map((w, i) => <div key={i}>{w}</div>)}
+          </div>
+        )}
       </div>
 
       {/* Instructions */}

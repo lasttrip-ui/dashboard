@@ -302,6 +302,10 @@ function DividendosTab() {
   const activeCos = useMemo(() => buildActiveCompanies(yearData), [yearData])
   const totalYear = yearData.reduce((s, d) => s + d.amount, 0)
   const monthsWithData = new Set(yearData.map(d => d.month)).size
+  const daysInYear = (y: number) => ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 366 : 365
+  const daysElapsed = year === CURRENT_YEAR
+    ? Math.ceil((Date.now() - new Date(year, 0, 1).getTime()) / 86_400_000)
+    : daysInYear(year)
   const topPayer = totals[0]?.company ?? "—"
   const hasData = yearData.length > 0
 
@@ -370,7 +374,7 @@ function DividendosTab() {
           {[
             { label: `Ingresos ${year}`, value: `€${totalYear.toFixed(2)}`, sub: undefined },
             { label: "Promedio Mensual", value: `€${monthsWithData > 0 ? (totalYear / monthsWithData).toFixed(2) : "0.00"}`, sub: `${monthsWithData} meses con dividendos` },
-            { label: "Promedio Diario", value: `€${(totalYear / 365).toFixed(2)}`, sub: undefined },
+            { label: "Promedio Diario", value: `€${(totalYear / Math.max(daysElapsed, 1)).toFixed(2)}`, sub: undefined },
             { label: "Empresas", value: `${activeCos.length}`, sub: topPayer !== "—" ? `${topPayer} es tu mayor pagador` : undefined },
           ].map(c => (
             <div key={c.label} className="card" style={{ padding: "0.875rem 1rem" }}>
@@ -521,7 +525,7 @@ function buildEquitySeries(trades: OptionTrade[], dividends: { month: number; am
   })
 }
 
-function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
+function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapshot | null; ibkrError: boolean; onRetry: () => void }) {
   const [evolPeriod, setEvolPeriod] = useState<EvolPeriod>("ytd")
   const trades = useAllTrades()
   const [importedDivs, setImportedDivs] = useState<ImportedDividend[]>([])
@@ -554,7 +558,17 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 
   if (!snapshot) return (
     <div style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
-      Cargando datos de IBKR…
+      {ibkrError ? (
+        <>
+          <div style={{ marginBottom: "0.75rem" }}>No se pudieron cargar los datos de IBKR.</div>
+          <button
+            onClick={onRetry}
+            style={{ padding: "0.4rem 1rem", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg-hover)", color: "var(--text-primary)", cursor: "pointer" }}
+          >
+            Reintentar
+          </button>
+        </>
+      ) : "Cargando datos de IBKR…"}
     </div>
   )
 
@@ -658,16 +672,19 @@ function SeguimientoTab({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function CarteraPage() {
-  const [tab, setTab] = useState<Tab>("dividendos")
+  const [tab, setTab] = useState<Tab>("cartera")
   const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
+  const [ibkrError, setIbkrError] = useState(false)
   const [degiroPositions, setDegiroPositions] = useState<Position[]>([])
+  const [retryTick, setRetryTick] = useState(0)
 
   useEffect(() => {
+    setIbkrError(false)
     fetch("/api/ibkr", { cache: "no-store" })
-      .then(r => r.ok ? r.json() : null)
-      .then(d => d && setSnapshot(d))
-      .catch(() => null)
-  }, [])
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(String(r.status))))
+      .then(d => setSnapshot(d))
+      .catch(() => setIbkrError(true))
+  }, [retryTick])
 
   useEffect(() => {
     function refresh() { setDegiroPositions(buildDeGiroPositions(loadImportedStockTxns())) }
@@ -711,7 +728,7 @@ export default function CarteraPage() {
       </div>
 
       {/* Content */}
-      {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} />}
+      {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} ibkrError={ibkrError} onRetry={() => setRetryTick(t => t + 1)} />}
       {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} baseCurrency={snapshot?.summary.currency ?? "EUR"} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>

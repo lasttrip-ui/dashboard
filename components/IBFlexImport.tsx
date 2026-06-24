@@ -4,20 +4,17 @@ import { useState, useRef } from "react"
 import { Upload, RefreshCw, Settings, X, CheckCircle, AlertCircle, Loader, Info } from "lucide-react"
 import { useLocalStorage } from "@/lib/store"
 import { fetchIBFlexQuery, parseUploadedXml, type IBFlexConfig } from "@/lib/ibflex"
-import type { ImportMeta } from "@/lib/imported-trades"
 import type { IBFlexResult } from "@/lib/ibflex"
 
 interface Props {
-  meta: ImportMeta | null
   onImport: (result: IBFlexResult) => void
-  onClear: () => void
 }
 
 type Status = "idle" | "loading" | "success" | "error"
 
-export default function IBFlexImport({ meta, onImport, onClear }: Props) {
+export default function IBFlexImport({ onImport }: Props) {
   const [open, setOpen] = useState(false)
-  const [config, setConfig] = useLocalStorage<IBFlexConfig>("lol-ib-config", { token: "", queryId: "" })
+  const [config, setConfig] = useLocalStorage<IBFlexConfig>("tt-ib-flex-config", { token: "", queryId: "" })
   const [status, setStatus] = useState<Status>("idle")
   const [errorMsg, setErrorMsg] = useState("")
   const [warnings, setWarnings] = useState<string[]>([])
@@ -76,36 +73,24 @@ export default function IBFlexImport({ meta, onImport, onClear }: Props) {
     }
   }
 
-  const metaDate = meta?.fetchedAt ? new Date(meta.fetchedAt).toLocaleDateString("es-ES") : null
-
   return (
     <>
       {/* Trigger */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        {meta && (
-          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            {meta.count} trades · {meta.accountId || "IB"} · {metaDate}
-          </span>
-        )}
         <button
           type="button"
           onClick={() => { reset(); setOpen(true) }}
           style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 14px", borderRadius: 8, border: "1px solid var(--border)",
-            background: meta ? "var(--amber-dim)" : "var(--bg-card)",
-            color: meta ? "var(--amber)" : "var(--text-secondary)",
+            background: "var(--bg-card)",
+            color: "var(--text-secondary)",
             cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "var(--font-sans)",
           }}
         >
-          {meta ? <RefreshCw size={14} /> : <Settings size={14} />}
-          {meta ? "Actualizar IB" : "Conectar IB"}
+          <Settings size={14} />
+          Conectar con IB (Flex Query)
         </button>
-        {meta && (
-          <button type="button" onClick={onClear} title="Eliminar datos IB" style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", padding: 4 }}>
-            <X size={14} />
-          </button>
-        )}
       </div>
 
       {/* Modal */}
