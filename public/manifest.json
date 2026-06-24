@@ -1,6 +1,6 @@
 {
-  "name": "Tortuga Trades",
-  "short_name": "TT",
+  "name": "Cartera de LastTrip",
+  "short_name": "LastTrip",
   "description": "Personal IB trading dashboard",
   "start_url": "/dashboard",
   "display": "standalone",

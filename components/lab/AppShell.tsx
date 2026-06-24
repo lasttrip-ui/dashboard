@@ -17,7 +17,6 @@ import {
   User,
   ChevronDown,
   Briefcase,
-  CalendarDays,
   type LucideIcon,
 } from "lucide-react"
 import { useLocalStorage } from "@/lib/store"
@@ -31,7 +30,6 @@ interface NavItem {
 
 const NAV: NavItem[] = [
   { href: "/panel", label: "Panel", icon: LayoutGrid },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays },
   { href: "/cartera", label: "Cartera", icon: Briefcase },
   { href: "/operaciones", label: "Operativa", icon: CandlestickChart },
   { href: "/bitacora", label: "Bitácora", icon: NotebookPen },
@@ -284,7 +282,7 @@ function Brand() {
         <CandlestickChart size={17} strokeWidth={2} />
       </span>
       <span style={{ fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: 20, lineHeight: 1 }}>
-        Options<span style={{ color: "var(--amber)" }}>Lab</span>
+        Cartera de <span style={{ color: "var(--amber)" }}>LastTrip</span>
       </span>
       <span
         style={{

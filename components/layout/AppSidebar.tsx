@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
 import {
-  LayoutDashboard, TrendingUp, Calendar, Briefcase,
+  LayoutDashboard, TrendingUp, Briefcase,
   Tag, Settings, Moon, Sun, LogOut, Upload, ChevronLeft, ChevronRight,
   Activity, Menu, X
 } from "lucide-react"
@@ -14,7 +14,6 @@ const MOBILE_BREAKPOINT = 768
 const NAV = [
   { href: "/panel",       icon: LayoutDashboard, label: "Panel" },
   { href: "/operaciones", icon: TrendingUp,       label: "Operaciones" },
-  { href: "/calendario",  icon: Calendar,         label: "Calendario" },
   { href: "/cartera",     icon: Briefcase,        label: "Cartera" },
   { href: "/clasificacion", icon: Tag,            label: "Clasificación" },
 ]
@@ -120,10 +119,10 @@ export default function AppSidebar({ theme, onThemeToggle }: Props) {
         {showExpanded ? (
           <div>
             <div style={{ fontSize: "0.5625rem", color: "var(--accent)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>
-              Options Dashboard
+              Dashboard
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em", marginTop: 2 }}>
-              Tortuga Trades
+              Cartera de LastTrip
             </div>
           </div>
         ) : (

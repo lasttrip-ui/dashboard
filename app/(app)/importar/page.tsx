@@ -509,7 +509,7 @@ export default function ImportPage() {
                   {savedExecs.length} movimientos históricos importados
                 </div>
                 <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-                  Visibles en el calendario · {savedExecs[0]?.tradeTime.slice(0, 10)} → {savedExecs[savedExecs.length - 1]?.tradeTime.slice(0, 10)}
+                  Visibles en Operaciones · {savedExecs[0]?.tradeTime.slice(0, 10)} → {savedExecs[savedExecs.length - 1]?.tradeTime.slice(0, 10)}
                 </div>
               </div>
             </div>
