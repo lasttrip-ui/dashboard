@@ -106,10 +106,19 @@ async function main() {
       const iso = dt
         ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}T${dt.slice(9, 11)}:${dt.slice(11, 13)}:${dt.slice(13, 15)}Z`
         : ""
-      return {
+      const cat = xmlAttr(row, "assetCategory")
+      const isOpt = cat === "OPT" || cat === "FOP"
+      // Option contract detail — lets Operaciones/Bitácora rebuild real trades
+      const putCall = xmlAttr(row, "putCall") // "P" | "C"
+      const strikeRaw = xmlAttr(row, "strike")
+      const expiryRaw = xmlAttr(row, "expiry") // YYYYMMDD
+      const expiry = /^\d{8}$/.test(expiryRaw)
+        ? `${expiryRaw.slice(0, 4)}-${expiryRaw.slice(4, 6)}-${expiryRaw.slice(6, 8)}`
+        : ""
+      const rec = {
         tradeId: xmlAttr(row, "tradeID") || xmlAttr(row, "transactionID"),
         symbol: xmlAttr(row, "underlyingSymbol") || xmlAttr(row, "symbol"),
-        secType: xmlAttr(row, "assetCategory"),
+        secType: cat,
         side: parseFloat(xmlAttr(row, "quantity")) < 0 ? "SELL" : "BUY",
         size: Math.abs(parseFloat(xmlAttr(row, "quantity")) || 0),
         price: parseFloat(xmlAttr(row, "tradePrice")) || 0,
@@ -118,18 +127,38 @@ async function main() {
         netAmount: Math.abs(parseFloat(xmlAttr(row, "proceeds")) || 0),
         realizedPnl: parseFloat(xmlAttr(row, "fifoPnlRealized")) || 0,
       }
+      if (isOpt) {
+        if (putCall === "P" || putCall === "C") rec.right = putCall
+        if (strikeRaw) rec.strike = parseFloat(strikeRaw) || 0
+        if (expiry) rec.expiry = expiry
+        const oc = xmlAttr(row, "openCloseIndicator") // "O" | "C" | "C;O"
+        if (oc) rec.openClose = oc.includes("O") && !oc.includes("C") ? "O" : oc.includes("C") ? "C" : ""
+      }
+      return rec
     })
     .filter(e => e.tradeId && e.size >= 1)
 
   if (execs.length > 0) {
     const histPath = path.join(__dirname, "..", "public", "data", "executions-history.json")
     const hist = JSON.parse(fs.readFileSync(histPath, "utf8"))
-    const known = new Set(hist.map(e => e.tradeId))
-    const fresh = execs.filter(e => !known.has(e.tradeId))
-    if (fresh.length > 0) {
-      const merged = [...hist, ...fresh].sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
+    const byId = new Map(hist.map(e => [e.tradeId, e]))
+    let added = 0
+    let enriched = 0
+    for (const e of execs) {
+      const existing = byId.get(e.tradeId)
+      if (!existing) {
+        byId.set(e.tradeId, e)
+        added++
+      } else if (existing.right === undefined && e.right !== undefined) {
+        // Backfill contract detail onto a record imported before enrichment
+        Object.assign(existing, { right: e.right, strike: e.strike, expiry: e.expiry, openClose: e.openClose })
+        enriched++
+      }
+    }
+    if (added > 0 || enriched > 0) {
+      const merged = Array.from(byId.values()).sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
       fs.writeFileSync(histPath, JSON.stringify(merged))
-      console.log("executions appended:", fresh.length, "→ total", merged.length)
+      console.log(`executions: +${added} new, ${enriched} enriched → total ${merged.length}`)
     } else {
       console.log("no new executions")
     }
