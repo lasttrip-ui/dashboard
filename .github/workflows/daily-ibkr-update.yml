@@ -36,11 +36,24 @@ jobs:
             exit 0
           fi
           git commit -m "Daily IBKR data update ($(date -u +%Y-%m-%d))"
+          pushed=""
           for i in 1 2 3 4 5; do
             git fetch origin "$GITHUB_REF_NAME"
-            git rebase "origin/$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            git rebase "origin/$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && pushed=1 && break
             git rebase --abort 2>/dev/null || true
             sleep $((i * 5))
           done
-          echo "::error::Failed to push after retries"
-          exit 1
+          if [ -z "$pushed" ]; then
+            echo "::error::Failed to push after retries"
+            exit 1
+          fi
+          # Keep main in sync so Vercel/main always serves fresh data.
+          # Fast-forward only: if main has diverged, warn instead of clobbering it.
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            git fetch origin main
+            if git merge-base --is-ancestor origin/main HEAD; then
+              git push origin "HEAD:main" || echo "::warning::Could not push data to main"
+            else
+              echo "::warning::main has diverged from $GITHUB_REF_NAME — sync manually"
+            fi
+          fi
