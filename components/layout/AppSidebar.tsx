@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
 import {
   LayoutDashboard, TrendingUp, Briefcase,
-  Tag, Settings, Moon, Sun, LogOut, Upload, ChevronLeft, ChevronRight,
+  Tag, Moon, Sun, Upload, ChevronLeft, ChevronRight,
   Activity, Menu, X
 } from "lucide-react"
 
@@ -15,12 +15,11 @@ const NAV = [
   { href: "/panel",       icon: LayoutDashboard, label: "Panel" },
   { href: "/operaciones", icon: TrendingUp,       label: "Operaciones" },
   { href: "/cartera",     icon: Briefcase,        label: "Cartera" },
-  { href: "/clasificacion", icon: Tag,            label: "Clasificación" },
+  { href: "/bitacora",    icon: Tag,              label: "Bitácora" },
 ]
 
 const BOTTOM = [
   { href: "/importar",  icon: Upload,   label: "Importar operaciones" },
-  { href: "/ajustes",   icon: Settings, label: "Ajustes" },
 ]
 
 interface Props {

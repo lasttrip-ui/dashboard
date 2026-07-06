@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { toEur } from "@/lib/currency"
 import type { Position } from "./types"
 
 interface Props {
@@ -11,7 +12,7 @@ type Tab = "STK" | "OPT"
 type SortKey = "symbol" | "pnl" | "value" | "pnlPct"
 
 function fmt(n: number, d = 2): string {
-  return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
+  return Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 
 function pnlColor(n: number): string {
@@ -79,7 +80,7 @@ function StocksTable({ positions, sortKey, sortDir, onSort }: {
               <tr key={p.contractId}>
                 <td style={{ fontWeight: 600 }}>{p.symbol}</td>
                 <td style={{ color: side === "Long" ? "var(--green)" : "var(--red)", fontSize: "0.75rem" }}>{side}</td>
-                <td className="num">{Math.abs(p.position).toLocaleString("en-US", { maximumFractionDigits: 4 })}</td>
+                <td className="num">{Math.abs(p.position).toLocaleString("es-ES", { maximumFractionDigits: 4 })}</td>
                 <td className="num">{ccy}{fmt(p.averagePrice)}</td>
                 <td className="num">{ccy}{fmt(p.marketPrice)}</td>
                 <td style={{ color: "var(--text-secondary)", fontSize: "0.75rem" }}>{p.currency}</td>
@@ -201,8 +202,9 @@ export default function PositionsPanel({ positions }: Props) {
     })
   }, [tab, stocks, options, filter, sortKey, sortDir])
 
-  const stkPnl = useMemo(() => stocks.reduce((s, p) => s + (p.currency === "USD" ? p.unrealizedPnl : 0), 0), [stocks])
-  const optPnl = useMemo(() => options.reduce((s, p) => s + (p.currency === "USD" ? p.unrealizedPnl : 0), 0), [options])
+  // Tab totals in EUR so multi-currency positions (USD, HKD…) are all counted
+  const stkPnl = useMemo(() => stocks.reduce((s, p) => s + toEur(p.unrealizedPnl, p.currency), 0), [stocks])
+  const optPnl = useMemo(() => options.reduce((s, p) => s + toEur(p.unrealizedPnl, p.currency), 0), [options])
 
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden" }}>
@@ -255,7 +257,7 @@ export default function PositionsPanel({ positions }: Props) {
                 fontSize: "0.6875rem",
                 color: (t === "STK" ? stkPnl : optPnl) >= 0 ? "var(--green)" : "var(--red)",
               }}>
-                {(t === "STK" ? stkPnl : optPnl) >= 0 ? "+" : ""}${Math.abs(t === "STK" ? stkPnl : optPnl).toFixed(0)}
+                {(t === "STK" ? stkPnl : optPnl) >= 0 ? "+" : "-"}€{Math.abs(t === "STK" ? stkPnl : optPnl).toLocaleString("es-ES", { maximumFractionDigits: 0 })}
               </span>
             </button>
           ))}

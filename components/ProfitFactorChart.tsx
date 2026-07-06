@@ -15,6 +15,22 @@ export default function ProfitFactorChart({ profitFactor, totalGains, totalLosse
   const gainsPct = total > 0 ? totalGains / total : 0.5
   const lossesPct = 1 - gainsPct
 
+  if (total === 0) {
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        minHeight: size === "small" ? 80 : 110, gap: "0.25rem",
+      }}>
+        <span style={{ fontSize: size === "small" ? "0.75rem" : "0.875rem", color: "var(--text-muted)" }}>
+          Sin datos
+        </span>
+        <span style={{ fontSize: "0.625rem", color: "var(--text-muted)" }}>
+          No hay operaciones cerradas en este período
+        </span>
+      </div>
+    )
+  }
+
   const data = [
     { value: gainsPct, color: "#f97316" },
     { value: lossesPct, color: "#2a2a2a" },

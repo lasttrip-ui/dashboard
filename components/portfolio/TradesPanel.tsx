@@ -7,7 +7,7 @@ interface Props {
 }
 
 function fmt(n: number, d = 2): string {
-  return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
+  return Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d })
 }
 
 function relativeTime(iso: string): string {

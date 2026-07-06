@@ -8,7 +8,7 @@ interface Props {
 }
 
 function fmt(n: number, decimals = 0): string {
-  return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+  return Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
 }
 
 function fmtCcy(n: number, ccy = "€", decimals = 0): string {

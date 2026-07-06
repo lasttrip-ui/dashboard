@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { loadImportedStockTxns, loadImportedDividends } from "@/lib/trade-store"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
-import { usdToEur } from "@/lib/currency"
+import { toEur } from "@/lib/currency"
 import { useTradeNotes } from "@/lib/notes"
 import type { OptionTrade } from "@/lib/data"
 import type { ImportedDividend } from "@/lib/import-parser"
@@ -13,14 +13,6 @@ import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
 
 function fmt(n: number, dec = 2) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec })
-}
-
-// Best-effort USD/GBP → EUR conversion, consistent with the approximation
-// already used across Cartera (no live FX feed wired up).
-function toEur(amount: number, currency: string): number {
-  if (currency === "GBP") return amount * 1.17
-  if (currency === "EUR") return amount
-  return usdToEur(amount)
 }
 
 function netPremium(t: OptionTrade): number {
@@ -33,6 +25,7 @@ function netPremium(t: OptionTrade): number {
 
 interface TickerGroup {
   ticker: string
+  name?: string
   shares: number
   avgCostEur: number
   totalInvestedEur: number
@@ -60,6 +53,8 @@ function buildGroups(positions: Position[], trades: OptionTrade[], dividends: Im
     const g = ensure(p.symbol.toUpperCase())
     g.shares += p.position
     g.totalInvestedEur += toEur(p.averagePrice * p.position, p.currency)
+    // Numeric tickers (HK exchange) are meaningless on their own — keep the company name
+    if (!g.name && p.description && /^\d+$/.test(p.symbol)) g.name = p.description
   }
 
   for (const t of trades) {
@@ -142,8 +137,9 @@ function TickerCard({ g }: { g: TickerGroup }) {
       >
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           {/* Ticker */}
-          <div style={{ minWidth: 80 }}>
+          <div style={{ minWidth: 80, maxWidth: 180 }}>
             <div style={{ fontWeight: 700, fontSize: 18, fontFamily: "var(--font-serif)" }}>{g.ticker}</div>
+            {g.name && <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.3 }}>{g.name}</div>}
             {g.shares > 0 && <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{fmt(g.shares, 0)} acciones</div>}
           </div>
 

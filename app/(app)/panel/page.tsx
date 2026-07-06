@@ -23,7 +23,7 @@ function fmtK(n: number): string {
 }
 
 function fmtEur(n: number): string {
-  return `€${Math.abs(n).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+  return `€${Math.abs(n).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`
 }
 
 function pnlColor(n: number) {
@@ -78,7 +78,9 @@ function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
   const first = data[0].nav
   const last  = data[data.length - 1].nav
   const gain  = last - first
-  const pct   = ((last / first - 1) * 100).toFixed(1)
+  // With a tiny starting NAV (first snapshot = seed deposit) a %-since-inception
+  // is meaningless noise (+34727%), so only show it from a real base
+  const pct   = first >= 1000 ? ((last / first - 1) * 100).toFixed(1) : null
   const color = "#22c55e"
 
   return (
@@ -91,22 +93,24 @@ function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
           <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)" }}>
             Datos reales IBKR
           </div>
-          <div style={{ fontSize: "0.75rem", color, fontWeight: 700 }} className="num">
-            +{pct}%
-          </div>
+          {pct !== null && (
+            <div style={{ fontSize: "0.75rem", color, fontWeight: 700 }} className="num">
+              +{pct}%
+            </div>
+          )}
         </div>
       </div>
-      <div style={{ display: "flex", gap: "2rem", marginBottom: "0.5rem", alignItems: "baseline" }}>
+      <div style={{ display: "flex", gap: "2rem", marginBottom: "0.5rem", alignItems: "baseline", flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>NAV Actual</div>
           <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color, lineHeight: 1.1 }}>
-            €{last.toLocaleString("en-US")}
+            €{last.toLocaleString("es-ES")}
           </div>
         </div>
         <div>
           <div style={{ fontSize: "0.5625rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Ganancia total</div>
           <div className="num" style={{ fontSize: "1rem", fontWeight: 700, color }}>
-            +€{gain.toLocaleString("en-US")}
+            +€{gain.toLocaleString("es-ES")}
           </div>
         </div>
         <div>
@@ -141,7 +145,7 @@ function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
             />
             <Tooltip
               contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
-              formatter={(v: number) => [`€${v.toLocaleString("en-US")}`, "NAV"]}
+              formatter={(v: number) => [`€${v.toLocaleString("es-ES")}`, "NAV"]}
             />
             <Area type="monotone" dataKey="nav" stroke={color} strokeWidth={2.5} fill="url(#grad_nav)" dot={{ fill: color, r: 3 }} activeDot={{ r: 5 }} />
           </AreaChart>
@@ -154,39 +158,41 @@ function NavHistoryCard({ snapshot }: { snapshot: IBKRSnapshot | null }) {
 // ── Monthly Heatmap ───────────────────────────────────────────────────────────
 
 function MonthlyHeatmap({
-  year = 2026,
+  years,
   trades,
   executions = [],
 }: {
-  year?: number
+  years: number[]
   trades: import("@/lib/data").OptionTrade[]
   executions?: IBKRTrade[]
 }) {
-  const monthlyPnl = useMemo(() => {
-    const result: Record<number, number> = {}
+  const pnlByYear = useMemo(() => {
+    const byYear: Record<number, Record<number, number>> = {}
+    for (const year of years) {
+      const result: Record<number, number> = {}
 
-    // Real IBKR execution P&L (non-zero entries only, any secType)
-    for (const e of executions) {
-      if (!e.realizedPnl || e.realizedPnl === 0) continue
-      const ey = parseInt(e.tradeTime.slice(0, 4), 10)
-      const em = parseInt(e.tradeTime.slice(5, 7), 10)
-      if (ey === year) result[em] = (result[em] ?? 0) + e.realizedPnl
-    }
-
-    // OptionTrade P&L for months where no execution data exists
-    for (let m = 1; m <= 12; m++) {
-      if (result[m] !== undefined) continue
-      const monthTrades = filterByMonth(trades, year, m)
-      if (monthTrades.length > 0) {
-        const pnl = calcStats(monthTrades).totalPnl
-        if (pnl !== 0) result[m] = pnl
+      // Real IBKR execution P&L (non-zero entries only, any secType)
+      for (const e of executions) {
+        if (!e.realizedPnl || e.realizedPnl === 0) continue
+        const ey = parseInt(e.tradeTime.slice(0, 4), 10)
+        const em = parseInt(e.tradeTime.slice(5, 7), 10)
+        if (ey === year) result[em] = (result[em] ?? 0) + e.realizedPnl
       }
+
+      // OptionTrade P&L for months where no execution data exists
+      for (let m = 1; m <= 12; m++) {
+        if (result[m] !== undefined) continue
+        const monthTrades = filterByMonth(trades, year, m)
+        if (monthTrades.length > 0) {
+          const pnl = calcStats(monthTrades).totalPnl
+          if (pnl !== 0) result[m] = pnl
+        }
+      }
+
+      byYear[year] = result
     }
-
-    return result
-  }, [year, trades, executions])
-
-  const total = Object.values(monthlyPnl).reduce((s, v) => s + v, 0)
+    return byYear
+  }, [years, trades, executions])
 
   return (
     <div className="card" style={{ padding: "0.875rem 1rem" }}>
@@ -205,45 +211,51 @@ function MonthlyHeatmap({
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td style={{ padding: "0.25rem 0.5rem", fontWeight: 700, color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{year}</td>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
-                const v = monthlyPnl[m]
-                return (
-                  <td key={m} style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
-                    {v !== undefined ? (
-                      <div style={{
-                        background: v > 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
-                        color: v > 0 ? "var(--green)" : "var(--red)",
-                        borderRadius: 6,
-                        padding: "0.25rem 0.375rem",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        whiteSpace: "nowrap",
-                      }} className="num">
-                        {fmtK(v)}
-                      </div>
-                    ) : (
-                      <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", padding: "0.25rem" }}>—</div>
-                    )}
+            {years.map(year => {
+              const monthlyPnl = pnlByYear[year] ?? {}
+              const total = Object.values(monthlyPnl).reduce((s, v) => s + v, 0)
+              return (
+                <tr key={year}>
+                  <td style={{ padding: "0.25rem 0.5rem", fontWeight: 700, color: "var(--text-secondary)", fontSize: "0.8125rem" }}>{year}</td>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => {
+                    const v = monthlyPnl[m]
+                    return (
+                      <td key={m} style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
+                        {v !== undefined ? (
+                          <div style={{
+                            background: v > 0 ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)",
+                            color: v > 0 ? "var(--green)" : "var(--red)",
+                            borderRadius: 6,
+                            padding: "0.25rem 0.375rem",
+                            fontSize: "0.75rem",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }} className="num">
+                            {fmtK(v)}
+                          </div>
+                        ) : (
+                          <div style={{ color: "var(--text-muted)", fontSize: "0.75rem", padding: "0.25rem" }}>—</div>
+                        )}
+                      </td>
+                    )
+                  })}
+                  <td style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
+                    <div style={{
+                      background: total > 0 ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)",
+                      color: total > 0 ? "var(--green)" : "var(--red)",
+                      borderRadius: 6,
+                      padding: "0.25rem 0.5rem",
+                      fontSize: "0.8125rem",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap",
+                      border: `1px solid ${total > 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                    }} className="num">
+                      {fmtK(total)}
+                    </div>
                   </td>
-                )
-              })}
-              <td style={{ padding: "0.1875rem 0.25rem", textAlign: "center" }}>
-                <div style={{
-                  background: total > 0 ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)",
-                  color: total > 0 ? "var(--green)" : "var(--red)",
-                  borderRadius: 6,
-                  padding: "0.25rem 0.5rem",
-                  fontSize: "0.8125rem",
-                  fontWeight: 700,
-                  whiteSpace: "nowrap",
-                  border: `1px solid ${total > 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
-                }} className="num">
-                  {fmtK(total)}
-                </div>
-              </td>
-            </tr>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -319,7 +331,7 @@ export default function PanelPage() {
       </div>
 
       {/* Row 1: KPI grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 0.85fr 1.1fr", gap: "0.875rem", alignItems: "stretch" }}>
+      <div className="grid-kpi3">
         <AccountSummary snapshot={snapshot} />
 
         {/* Factor de Beneficio */}
@@ -359,14 +371,10 @@ export default function PanelPage() {
       <NavHistoryCard snapshot={snapshot} />
 
       {/* Row 3: Monthly Heatmap (multi-year) */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <MonthlyHeatmap year={2024} trades={trades} executions={executions} />
-        <MonthlyHeatmap year={2025} trades={trades} executions={executions} />
-        <MonthlyHeatmap year={2026} trades={trades} executions={executions} />
-      </div>
+      <MonthlyHeatmap years={[2024, 2025, 2026]} trades={trades} executions={executions} />
 
       {/* Row 4: Calendar + Tickers sidebar */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "0.875rem", alignItems: "start" }}>
+      <div className="grid-cal">
         <Calendar
           trades={trades}
           viewYear={viewYear}

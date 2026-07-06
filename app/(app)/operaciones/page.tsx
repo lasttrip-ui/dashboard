@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAllTrades } from "@/hooks/use-all-trades"
-import { calcStats, filterByMonth, filterByYear, MONTH_NAMES_ES } from "@/lib/utils"
-import { usdToEur } from "@/lib/currency"
+import { calcStats, filterByMonth, filterByYear, fmtDollar, MONTH_NAMES_ES } from "@/lib/utils"
 import TradesTable from "@/components/TradesTable"
 import AddTradeModal from "@/components/AddTradeModal"
 import { TODAY } from "@/lib/utils"
@@ -35,6 +34,14 @@ export default function OperacionesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingTrade, setEditingTrade] = useState<OptionTrade | undefined>(undefined)
 
+  // If the current month has no trades yet, open on "Todo" so the first view isn't empty
+  const autoAdjusted = useRef(false)
+  useEffect(() => {
+    if (autoAdjusted.current || trades.length === 0) return
+    autoAdjusted.current = true
+    if (filterByMonth(trades, ty, tm).length === 0) setViewMode("todo")
+  }, [trades, ty, tm])
+
   const periodTrades = viewMode === "mes"
     ? filterByMonth(trades, viewYear, viewMonth)
     : viewMode === "anio"
@@ -59,10 +66,10 @@ export default function OperacionesPage() {
         {/* Stats strip */}
         <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           {[
-            { label: statsLabel, value: `${stats.totalPnl >= 0 ? "+" : ""}€${usdToEur(stats.totalPnl).toFixed(2)}`, color: stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" },
-            { label: "Ganadas", value: `${stats.wins}`, color: "var(--green)" },
-            { label: "Perdidas", value: `${stats.losses}`, color: "var(--red)" },
-            { label: "Win rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 60 ? "var(--green)" : "var(--orange)" },
+            { label: statsLabel, value: stats.tradeCount > 0 ? fmtDollar(stats.totalPnl) : "—", color: stats.tradeCount === 0 ? "var(--text-muted)" : stats.totalPnl >= 0 ? "var(--green)" : "var(--red)" },
+            { label: "Ganadas", value: `${stats.wins}`, color: stats.tradeCount === 0 ? "var(--text-muted)" : "var(--green)" },
+            { label: "Perdidas", value: `${stats.losses}`, color: stats.tradeCount === 0 ? "var(--text-muted)" : "var(--red)" },
+            { label: "Win rate", value: stats.wins + stats.losses > 0 ? `${stats.winRate.toFixed(1)}%` : "—", color: stats.wins + stats.losses === 0 ? "var(--text-muted)" : stats.winRate >= 60 ? "var(--green)" : "var(--orange)" },
           ].map(s => (
             <div key={s.label} style={{ textAlign: "right" }}>
               <div style={{ fontSize: "0.6875rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>

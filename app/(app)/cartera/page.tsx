@@ -71,7 +71,7 @@ function PositionesTab({ positions, balances, baseCurrency }: { positions: Posit
   const rateFor = useMemo(() => buildRateFor(balances), [balances])
 
   function fmt(n: number, d = 2) {
-    return Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d })
+    return Math.abs(n).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d })
   }
 
   function toggleSort(key: PosSortKey) {
@@ -370,7 +370,7 @@ function DividendosTab() {
 
       {hasData && <>
         {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
+        <div className="grid-4">
           {[
             { label: `Ingresos ${year}`, value: `€${totalYear.toFixed(2)}`, sub: undefined },
             { label: "Promedio Mensual", value: `€${monthsWithData > 0 ? (totalYear / monthsWithData).toFixed(2) : "0.00"}`, sub: `${monthsWithData} meses con dividendos` },
@@ -578,13 +578,13 @@ function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapsh
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem" }}>
+      <div className="grid-3">
         {[
-          { label: "Valor Liquidación Neta", value: `€${s.netLiquidation.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
-          { label: "Exposición Bruta", value: `€${s.grossPositionValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
-          { label: "P&L No Realizado", value: `${upnl >= 0 ? "+" : ""}€${Math.abs(upnl).toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: upnl >= 0 ? "var(--green)" : "var(--red)" },
-          { label: "Efectivo Total", value: `€${s.totalCashValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
-          { label: "Margen Inicial", value: `€${s.initialMargin.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
+          { label: "Valor Liquidación Neta", value: `€${s.netLiquidation.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
+          { label: "Exposición Bruta", value: `€${s.grossPositionValue.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
+          { label: "P&L No Realizado", value: `${upnl >= 0 ? "+" : ""}€${Math.abs(upnl).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: upnl >= 0 ? "var(--green)" : "var(--red)" },
+          { label: "Efectivo Total", value: `€${s.totalCashValue.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
+          { label: "Margen Inicial", value: `€${s.initialMargin.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
           { label: "Apalancamiento", value: `${s.leverage}x`, color: parseFloat(s.leverage) > 2.5 ? "var(--red)" : "var(--orange)" },
         ].map(c => (
           <div key={c.label} className="card" style={{ padding: "0.875rem 1rem" }}>
@@ -617,15 +617,15 @@ function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapsh
         <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.875rem" }}>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado al inicio</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{baseline >= 0 ? "+" : ""}€{baseline.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{baseline >= 0 ? "+" : "-"}€{Math.abs(baseline).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>Variación del periodo</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: periodChange >= 0 ? "var(--green)" : "var(--red)" }}>{periodChange >= 0 ? "+" : ""}€{periodChange.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: periodChange >= 0 ? "var(--green)" : "var(--red)" }}>{periodChange >= 0 ? "+" : "-"}€{Math.abs(periodChange).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           </div>
           <div>
             <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>P&L acumulado total</div>
-            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{allTimeTotal >= 0 ? "+" : ""}€{allTimeTotal.toFixed(2)}</div>
+            <div className="num" style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--text-primary)" }}>{allTimeTotal >= 0 ? "+" : "-"}€{Math.abs(allTimeTotal).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           </div>
         </div>
 
@@ -642,7 +642,18 @@ function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapsh
                   <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} minTickGap={30} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 10, fill: "var(--text-secondary)" }}
+                axisLine={false}
+                tickLine={false}
+                minTickGap={48}
+                tickFormatter={(d: string) => {
+                  const [, m, dd] = d.split("-")
+                  const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+                  return `${parseInt(dd, 10)} ${meses[parseInt(m, 10) - 1]}`
+                }}
+              />
               <YAxis tick={{ fontSize: 11, fill: "var(--text-secondary)" }} axisLine={false} tickLine={false} tickFormatter={v => `€${v.toFixed(0)}`} width={56} />
               <Tooltip
                 contentStyle={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: "0.75rem" }}
