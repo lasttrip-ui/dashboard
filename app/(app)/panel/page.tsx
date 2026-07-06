@@ -5,6 +5,7 @@ import { navHistoryData } from "@/lib/data"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByPeriod, filterByMonth, filterByDateRange, tradePnl, getTickerStats, MONTH_NAMES_ES, PeriodKey, TODAY } from "@/lib/utils"
 import { usdToEur } from "@/lib/currency"
+import { loadMergedExecutions } from "@/lib/executions"
 import PeriodSelector from "@/components/PeriodSelector"
 import WinRateGauge from "@/components/WinRateGauge"
 import ProfitFactorChart from "@/components/ProfitFactorChart"
@@ -286,24 +287,11 @@ export default function PanelPage() {
       .catch(() => null)
   }, [])
 
-  // Full real execution history (Apr 2025 → today) + imported CSVs for the calendar
+  // Full real execution history (Apr 2025 → today) + imported CSVs for the
+  // calendar, deduped across sources (see lib/executions.ts)
   const [executions, setExecutions] = useState<IBKRTrade[]>([])
   useEffect(() => {
-    fetch("/data/executions-history.json")
-      .then(r => r.ok ? r.json() : [])
-      .then((d: IBKRTrade[]) => {
-        if (!Array.isArray(d)) d = []
-        // Merge imported executions (older CSV history), dedupe by tradeId
-        try {
-          const raw = localStorage.getItem("tt-imported-execs")
-          const imported: IBKRTrade[] = raw ? JSON.parse(raw) : []
-          const ids = new Set(d.map(e => e.tradeId))
-          d = [...d, ...imported.filter(e => !ids.has(e.tradeId))]
-          d.sort((a, b) => a.tradeTime.localeCompare(b.tradeTime))
-        } catch { /* ignore */ }
-        setExecutions(d)
-      })
-      .catch(() => null)
+    loadMergedExecutions().then(setExecutions)
   }, [])
 
   const periodTrades = period === "custom" && customRange
