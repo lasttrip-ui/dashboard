@@ -106,7 +106,7 @@ async function main() {
       const iso = dt
         ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}T${dt.slice(9, 11)}:${dt.slice(11, 13)}:${dt.slice(13, 15)}Z`
         : ""
-      return {
+      const exec = {
         tradeId: xmlAttr(row, "tradeID") || xmlAttr(row, "transactionID"),
         symbol: xmlAttr(row, "underlyingSymbol") || xmlAttr(row, "symbol"),
         secType: xmlAttr(row, "assetCategory"),
@@ -118,12 +118,23 @@ async function main() {
         netAmount: Math.abs(parseFloat(xmlAttr(row, "proceeds")) || 0),
         realizedPnl: parseFloat(xmlAttr(row, "fifoPnlRealized")) || 0,
       }
+      // Option contract details, so the app can pair opens/closes per contract
+      if (exec.secType === "OPT") {
+        const expiry = xmlAttr(row, "expiry")       // e.g. 20260717
+        const strike = xmlAttr(row, "strike")
+        const putCall = xmlAttr(row, "putCall")     // P | C
+        if (expiry) exec.expiry = `${expiry.slice(0, 4)}-${expiry.slice(4, 6)}-${expiry.slice(6, 8)}`
+        if (strike) exec.strike = parseFloat(strike)
+        if (putCall) exec.putCall = putCall
+      }
+      return exec
     })
     .filter(e => e.tradeId && e.size >= 1)
 
+  const histPath = path.join(__dirname, "..", "public", "data", "executions-history.json")
+  const hist = JSON.parse(fs.readFileSync(histPath, "utf8"))
+
   if (execs.length > 0) {
-    const histPath = path.join(__dirname, "..", "public", "data", "executions-history.json")
-    const hist = JSON.parse(fs.readFileSync(histPath, "utf8"))
     const known = new Set(hist.map(e => e.tradeId))
     const fresh = execs.filter(e => !known.has(e.tradeId))
     if (fresh.length > 0) {
@@ -135,6 +146,19 @@ async function main() {
     }
 
     snap.recentTrades = execs.slice(-40).reverse()
+  } else {
+    console.log("statement contained 0 trades")
+  }
+
+  // Gap detection: if the statement window starts after the last known
+  // execution, trades in between were never captured (Flex Query period too
+  // short). Surface it loudly in the Actions log.
+  if (hist.length > 0) {
+    const lastKnown = hist[hist.length - 1].tradeTime.slice(0, 10)
+    const windowStart = execs.length > 0 ? execs.map(e => e.tradeTime.slice(0, 10)).sort()[0] : null
+    if (windowStart && windowStart > lastKnown) {
+      console.log(`::warning::Possible gap: statement window starts ${windowStart} but last known execution is ${lastKnown}. Set the Flex Query period to "Last 45 days" and re-run to backfill.`)
+    }
   }
 
   snap.lastUpdated = new Date().toISOString()

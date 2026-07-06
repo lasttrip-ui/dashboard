@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { calcStats, filterByMonth, filterByYear, fmtDollar, MONTH_NAMES_ES } from "@/lib/utils"
 import TradesTable from "@/components/TradesTable"
+import ExecutionsTable from "@/components/ExecutionsTable"
 import AddTradeModal from "@/components/AddTradeModal"
 import { TODAY } from "@/lib/utils"
 import type { OptionTrade } from "@/lib/data"
@@ -24,10 +25,12 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
 }
 
 type ViewMode = "mes" | "anio" | "todo"
+type DataSource = "estrategias" | "ejecuciones"
 
 export default function OperacionesPage() {
   const trades = useAllTrades()
   const [ty, tm] = TODAY.split("-").map(Number)
+  const [source, setSource] = useState<DataSource>("estrategias")
   const [viewMode, setViewMode] = useState<ViewMode>("mes")
   const [viewYear, setViewYear] = useState(ty)
   const [viewMonth, setViewMonth] = useState(tm)
@@ -94,17 +97,37 @@ export default function OperacionesPage() {
         </div>
       </div>
 
-      {/* Trades Table */}
-      <TradesTable
-        trades={trades}
-        viewMode={viewMode}
-        viewYear={viewYear}
-        viewMonth={viewMonth}
-        onModeChange={setViewMode}
-        onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
-        onYearChange={y => setViewYear(y)}
-        onEdit={trade => setEditingTrade(trade)}
-      />
+      {/* Source toggle: curated strategy trades vs raw IBKR executions */}
+      <div style={{ display: "flex", gap: "2px", background: "var(--bg-card)", borderRadius: 8, padding: "3px", alignSelf: "flex-start", border: "1px solid var(--border)" }}>
+        {([
+          { key: "estrategias", label: "Estrategias" },
+          { key: "ejecuciones", label: "Ejecuciones IBKR" },
+        ] as { key: DataSource; label: string }[]).map(t => (
+          <button key={t.key} onClick={() => setSource(t.key)} style={{
+            padding: "0.35rem 0.875rem", borderRadius: 6, border: "none", cursor: "pointer",
+            background: source === t.key ? "var(--accent)" : "transparent",
+            color: source === t.key ? "#fff" : "var(--text-secondary)",
+            fontSize: "0.8125rem", fontWeight: source === t.key ? 600 : 400,
+          }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {source === "ejecuciones" ? (
+        <ExecutionsTable />
+      ) : (
+        <TradesTable
+          trades={trades}
+          viewMode={viewMode}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          onModeChange={setViewMode}
+          onMonthChange={(y, m) => { setViewYear(y); setViewMonth(m) }}
+          onYearChange={y => setViewYear(y)}
+          onEdit={trade => setEditingTrade(trade)}
+        />
+      )}
 
       {(showAddModal || editingTrade) && (
         <AddTradeModal
