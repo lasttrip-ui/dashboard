@@ -525,10 +525,20 @@ function buildEquitySeries(trades: OptionTrade[], dividends: { month: number; am
   })
 }
 
-function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapshot | null; ibkrError: boolean; onRetry: () => void }) {
+function SeguimientoTab({ snapshot, ibkrError, onRetry, degiroPositions }: { snapshot: IBKRSnapshot | null; ibkrError: boolean; onRetry: () => void; degiroPositions: Position[] }) {
   const [evolPeriod, setEvolPeriod] = useState<EvolPeriod>("ytd")
   const trades = useAllTrades()
   const [importedDivs, setImportedDivs] = useState<ImportedDividend[]>([])
+
+  // DEGIRO holdings live outside the IBKR account, so the IBKR NLV alone
+  // understates the real portfolio. Value them (live quotes when available)
+  // in EUR and show a combined total.
+  const { live: degiroLive } = useLiveQuotes(degiroPositions)
+  const rateFor = useMemo(() => buildRateFor(snapshot?.balances ?? []), [snapshot])
+  const degiroValueEur = useMemo(() => degiroPositions.reduce((s, p) => {
+    const v = degiroLive.get(p.contractId)?.marketValue ?? p.marketValue
+    return s + Math.abs(v) * rateFor(p.currency)
+  }, 0), [degiroPositions, degiroLive, rateFor])
 
   useEffect(() => {
     setImportedDivs(loadImportedDividends())
@@ -575,12 +585,30 @@ function SeguimientoTab({ snapshot, ibkrError, onRetry }: { snapshot: IBKRSnapsh
   const s = snapshot.summary
   const base = snapshot.balances.find(b => b.currency === "BASE")
   const upnl = base?.unrealizedPnl ?? 0
+  const totalPortfolio = s.netLiquidation + degiroValueEur
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      {degiroValueEur > 0 && (
+        <div className="card" style={{ padding: "1rem 1.25rem", display: "flex", alignItems: "baseline", gap: "1.5rem", flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: "0.5625rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)", marginBottom: "0.375rem" }}>
+              Valor Total Cartera · IBKR + DEGIRO
+            </div>
+            <div className="num" style={{ fontSize: "1.75rem", fontWeight: 800, color: "var(--green)", lineHeight: 1.1 }}>
+              €{totalPortfolio.toLocaleString("es-ES", { maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.75rem", color: "var(--text-muted)" }} className="num">
+            <span>IBKR (liquidación neta) <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>€{s.netLiquidation.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</span></span>
+            <span>Acciones DEGIRO <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>€{degiroValueEur.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</span></span>
+          </div>
+        </div>
+      )}
+
       <div className="grid-3">
         {[
-          { label: "Valor Liquidación Neta", value: `€${s.netLiquidation.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
+          { label: "Liquidación Neta IBKR", value: `€${s.netLiquidation.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
           { label: "Exposición Bruta", value: `€${s.grossPositionValue.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
           { label: "P&L No Realizado", value: `${upnl >= 0 ? "+" : ""}€${Math.abs(upnl).toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: upnl >= 0 ? "var(--green)" : "var(--red)" },
           { label: "Efectivo Total", value: `€${s.totalCashValue.toLocaleString("es-ES", { maximumFractionDigits: 0 })}`, color: "var(--text-primary)" },
@@ -739,7 +767,7 @@ export default function CarteraPage() {
       </div>
 
       {/* Content */}
-      {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} ibkrError={ibkrError} onRetry={() => setRetryTick(t => t + 1)} />}
+      {tab === "cartera"    && <SeguimientoTab snapshot={snapshot} ibkrError={ibkrError} onRetry={() => setRetryTick(t => t + 1)} degiroPositions={degiroPositions} />}
       {tab === "posiciones" && <PositionesTab positions={allPositions} balances={snapshot?.balances ?? []} baseCurrency={snapshot?.summary.currency ?? "EUR"} />}
       {tab === "dividendos" && <DividendosTab />}
     </div>
