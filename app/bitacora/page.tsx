@@ -5,11 +5,12 @@ import { ChevronDown, ChevronUp, Pencil, NotebookPen } from "lucide-react"
 import { useAllTrades } from "@/hooks/use-all-trades"
 import { loadImportedStockTxns, loadImportedDividends } from "@/lib/trade-store"
 import { buildDeGiroPositions } from "@/lib/degiro-positions"
+import { loadMergedExecutions } from "@/lib/executions"
 import { toEur } from "@/lib/currency"
 import { useTradeNotes } from "@/lib/notes"
 import type { OptionTrade } from "@/lib/data"
 import type { ImportedDividend } from "@/lib/import-parser"
-import type { IBKRSnapshot, Position } from "@/components/portfolio/types"
+import type { IBKRSnapshot, Position, Trade as IBKRTrade } from "@/components/portfolio/types"
 
 function fmt(n: number, dec = 2) {
   return n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec })
@@ -30,19 +31,21 @@ interface TickerGroup {
   avgCostEur: number
   totalInvestedEur: number
   trades: OptionTrade[]
-  totalPremiumsUSD: number
+  execs: IBKRTrade[]          // real IBKR option executions for this underlying
+  optionsPnlEur: number       // net options P&L (from execs when available)
+  fromExecs: boolean          // true when optionsPnlEur comes from real executions
   dividendsEur: number
   effectiveCostPerShare: number
   totalSavingEur: number
 }
 
-function buildGroups(positions: Position[], trades: OptionTrade[], dividends: ImportedDividend[]): TickerGroup[] {
+function buildGroups(positions: Position[], trades: OptionTrade[], dividends: ImportedDividend[], executions: IBKRTrade[]): TickerGroup[] {
   const groups = new Map<string, TickerGroup>()
 
   function ensure(ticker: string): TickerGroup {
     let g = groups.get(ticker)
     if (!g) {
-      g = { ticker, shares: 0, avgCostEur: 0, totalInvestedEur: 0, trades: [], totalPremiumsUSD: 0, dividendsEur: 0, effectiveCostPerShare: 0, totalSavingEur: 0 }
+      g = { ticker, shares: 0, avgCostEur: 0, totalInvestedEur: 0, trades: [], execs: [], optionsPnlEur: 0, fromExecs: false, dividendsEur: 0, effectiveCostPerShare: 0, totalSavingEur: 0 }
       groups.set(ticker, g)
     }
     return g
@@ -60,7 +63,14 @@ function buildGroups(positions: Position[], trades: OptionTrade[], dividends: Im
   for (const t of trades) {
     const g = ensure(t.ticker.toUpperCase())
     g.trades.push(t)
-    g.totalPremiumsUSD += netPremium(t)
+  }
+
+  // Real IBKR option executions per underlying (fifoPnlRealized is in the
+  // account base currency, EUR)
+  for (const e of executions) {
+    if (e.secType !== "OPT") continue
+    const g = ensure(e.symbol.toUpperCase())
+    g.execs.push(e)
   }
 
   for (const d of dividends) {
@@ -70,8 +80,16 @@ function buildGroups(positions: Position[], trades: OptionTrade[], dividends: Im
 
   groups.forEach(g => {
     g.avgCostEur = g.shares > 0 ? g.totalInvestedEur / g.shares : 0
-    const premiumsEur = toEur(g.totalPremiumsUSD, "USD")
-    g.totalSavingEur = premiumsEur + g.dividendsEur
+    // Prefer real executions; fall back to manual/imported OptionTrades for
+    // tickers that have no synced execution data
+    if (g.execs.length > 0) {
+      g.fromExecs = true
+      g.optionsPnlEur = g.execs.reduce((s, e) => s + (e.realizedPnl || 0), 0)
+      g.execs.sort((a, b) => b.tradeTime.localeCompare(a.tradeTime))
+    } else {
+      g.optionsPnlEur = toEur(g.trades.reduce((s, t) => s + netPremium(t), 0), "USD")
+    }
+    g.totalSavingEur = g.optionsPnlEur + g.dividendsEur
     if (g.shares > 0 && g.totalInvestedEur > 0) {
       g.effectiveCostPerShare = (g.totalInvestedEur - g.totalSavingEur) / g.shares
     }
@@ -79,7 +97,7 @@ function buildGroups(positions: Position[], trades: OptionTrade[], dividends: Im
   })
 
   return Array.from(groups.values())
-    .filter(g => g.shares > 0 || g.trades.length > 0 || g.dividendsEur !== 0)
+    .filter(g => g.shares > 0 || g.trades.length > 0 || g.execs.length > 0 || g.dividendsEur !== 0)
     .sort((a, b) => b.totalInvestedEur - a.totalInvestedEur)
 }
 
@@ -127,13 +145,14 @@ function TickerCard({ g }: { g: TickerGroup }) {
   const hasSaving = g.totalSavingEur > 0.01 && g.shares > 0
   const saving = g.avgCostEur - g.effectiveCostPerShare
   const savingPct = g.avgCostEur > 0 ? (saving / g.avgCostEur) * 100 : 0
+  const hasDetail = g.execs.length > 0 || g.trades.length > 0
 
   return (
     <div style={{ background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
       {/* Summary row */}
       <div
-        onClick={() => g.trades.length > 0 && setExpanded(e => !e)}
-        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, padding: "18px 20px", cursor: g.trades.length > 0 ? "pointer" : "default" }}
+        onClick={() => hasDetail && setExpanded(e => !e)}
+        style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 16, padding: "18px 20px", cursor: hasDetail ? "pointer" : "default" }}
       >
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
           {/* Ticker */}
@@ -151,10 +170,13 @@ function TickerCard({ g }: { g: TickerGroup }) {
                 <div style={{ fontWeight: 600, fontSize: 15 }}>{fmt(g.avgCostEur)} €</div>
               </div>
             )}
-            {g.totalPremiumsUSD !== 0 && (
+            {g.optionsPnlEur !== 0 && (
               <div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>P&L opciones neto</div>
-                <div style={{ fontWeight: 600, fontSize: 15, color: g.totalPremiumsUSD >= 0 ? "var(--green)" : "var(--red)" }}>{g.totalPremiumsUSD >= 0 ? "+" : ""}{fmt(toEur(g.totalPremiumsUSD, "USD"))} €</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 2 }}>
+                  P&L opciones neto{g.fromExecs && <span style={{ color: "var(--amber)" }}> · IBKR</span>}
+                </div>
+                <div style={{ fontWeight: 600, fontSize: 15, color: g.optionsPnlEur >= 0 ? "var(--green)" : "var(--red)" }}>{g.optionsPnlEur >= 0 ? "+" : ""}{fmt(g.optionsPnlEur)} €</div>
+                {g.fromExecs && <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>{g.execs.length} ejecuciones</div>}
               </div>
             )}
             {g.dividendsEur !== 0 && (
@@ -184,15 +206,55 @@ function TickerCard({ g }: { g: TickerGroup }) {
           </div>
         </div>
 
-        {g.trades.length > 0 && (
+        {hasDetail && (
           <div style={{ display: "flex", alignItems: "flex-start", color: "var(--text-secondary)", paddingTop: 4 }}>
             {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </div>
         )}
       </div>
 
-      {/* Trades detail */}
-      {expanded && g.trades.length > 0 && (
+      {/* Executions detail (real IBKR data) */}
+      {expanded && g.execs.length > 0 && (
+        <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-primary)", maxHeight: 320, overflowY: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                {["Fecha", "Contrato", "Lado", "Qty", "Precio", "P&L realizado"].map(h => (
+                  <th key={h} style={{ padding: "9px 16px", textAlign: "left", fontSize: 10, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)" }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {g.execs.map(e => {
+                const expired = e.price === 0 && e.realizedPnl !== 0
+                const sideLabel = expired ? "Expirada" : e.side === "SELL" ? "Venta" : "Compra"
+                const contract = [e.putCall === "P" ? "Put" : e.putCall === "C" ? "Call" : "OPT", e.strike, e.expiry?.slice(2)].filter(Boolean).join(" ")
+                return (
+                  <tr key={e.tradeId} style={{ borderBottom: "1px solid var(--border)" }}>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>{e.tradeTime.slice(0, 10)}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13, color: "var(--text-secondary)" }}>{contract || "—"}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>
+                      <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 12, fontWeight: 600, background: expired ? "rgba(251,191,36,0.12)" : e.side === "SELL" ? "rgba(239,68,68,0.10)" : "rgba(52,211,153,0.10)", color: expired ? "var(--amber)" : e.side === "SELL" ? "var(--red)" : "var(--green)" }}>
+                        {sideLabel}
+                      </span>
+                    </td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>{e.size}</td>
+                    <td style={{ padding: "10px 16px", fontSize: 13 }}>${fmt(e.price)}</td>
+                    <td style={{ padding: "10px 16px", fontWeight: 600, fontSize: 13, color: e.realizedPnl > 0 ? "var(--green)" : e.realizedPnl < 0 ? "var(--red)" : "var(--text-secondary)" }}>
+                      {e.realizedPnl !== 0 ? `${e.realizedPnl > 0 ? "+" : ""}${fmt(e.realizedPnl)} €` : "—"}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Manual/imported trades detail (fallback when no synced executions) */}
+      {expanded && g.execs.length === 0 && g.trades.length > 0 && (
         <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-primary)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -244,6 +306,7 @@ export default function BitacoraPage() {
   const [snapshot, setSnapshot] = useState<IBKRSnapshot | null>(null)
   const [degiroPositions, setDegiroPositions] = useState<Position[]>([])
   const [dividends, setDividends] = useState<ImportedDividend[]>([])
+  const [executions, setExecutions] = useState<IBKRTrade[]>([])
 
   useEffect(() => {
     fetch("/api/ibkr", { cache: "no-store" })
@@ -256,6 +319,7 @@ export default function BitacoraPage() {
     function refresh() {
       setDegiroPositions(buildDeGiroPositions(loadImportedStockTxns()))
       setDividends(loadImportedDividends())
+      loadMergedExecutions().then(setExecutions)
     }
     refresh()
     window.addEventListener("storage", refresh)
@@ -264,7 +328,7 @@ export default function BitacoraPage() {
 
   const positions = useMemo(() => [...(snapshot?.positions ?? []), ...degiroPositions], [snapshot, degiroPositions])
   const hasStockData = positions.some(p => p.assetClass === "STK")
-  const groups = useMemo(() => buildGroups(positions, trades, dividends), [positions, trades, dividends])
+  const groups = useMemo(() => buildGroups(positions, trades, dividends, executions), [positions, trades, dividends, executions])
 
   return (
     <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { loadMergedExecutions } from "@/lib/executions"
 import type { Trade as IBKRTrade } from "@/components/portfolio/types"
 
 // Mirror of IBKR's "Órdenes y transacciones → Operaciones": every execution
@@ -12,19 +13,7 @@ function fmt(n: number, d = 2): string {
 }
 
 function loadExecutions(): Promise<IBKRTrade[]> {
-  return fetch("/data/executions-history.json")
-    .then(r => (r.ok ? r.json() : []))
-    .then((d: IBKRTrade[]) => {
-      if (!Array.isArray(d)) d = []
-      try {
-        const raw = localStorage.getItem("tt-imported-execs")
-        const imported: IBKRTrade[] = raw ? JSON.parse(raw) : []
-        const ids = new Set(d.map(e => e.tradeId))
-        d = [...d, ...imported.filter(e => !ids.has(e.tradeId))]
-      } catch { /* ignore */ }
-      return d.sort((a, b) => b.tradeTime.localeCompare(a.tradeTime))
-    })
-    .catch(() => [])
+  return loadMergedExecutions().then(d => d.slice().reverse())
 }
 
 export default function ExecutionsTable() {

@@ -51,6 +51,10 @@ export interface Trade {
   commission: number
   netAmount: number
   realizedPnl: number
+  // Option contract details (present on executions synced after 2026-07)
+  expiry?: string
+  strike?: number
+  putCall?: "P" | "C"
 }
 
 export interface IBKRSnapshot {
