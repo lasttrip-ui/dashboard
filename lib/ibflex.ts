@@ -180,12 +180,35 @@ export function parseUploadedXml(xml: string): IBFlexResult {
   return { trades, accountId, fetchedAt: new Date().toISOString(), warnings }
 }
 
-// ── Direct IB API fetch (blocked by CORS in browser) ──────────────────────
+// ── IB API fetch ────────────────────────────────────────────────────────────
+// IB's Flex Web Service has no CORS headers, so browsers can't call it
+// directly. The app's own /api/flex route proxies the request server-side;
+// the direct call remains only as a fallback for static deployments
+// (GitHub Pages) where API routes don't exist.
 
 const SEND_REQUEST = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest"
 const GET_STATEMENT = "https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.GetStatement"
 
-export async function fetchIBFlexQuery(config: IBFlexConfig): Promise<IBFlexResult> {
+async function fetchViaProxy(config: IBFlexConfig): Promise<IBFlexResult | null> {
+  let res: Response
+  try {
+    res = await fetch("/api/flex", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: config.token, queryId: config.queryId }),
+    })
+  } catch {
+    return null // proxy unreachable → let caller try direct
+  }
+  if (res.status === 404 || res.status === 405) return null // static deploy without API routes
+  if (!res.ok) {
+    const err = await res.json().catch(() => null)
+    throw new Error(err?.error || `Error del proxy Flex (${res.status})`)
+  }
+  return parseUploadedXml(await res.text())
+}
+
+async function fetchDirect(config: IBFlexConfig): Promise<IBFlexResult> {
   const reqXml = await fetch(`${SEND_REQUEST}?t=${config.token}&q=${config.queryId}&v=3`).then(r => r.text())
   const refMatch = reqXml.match(/<ReferenceCode>(.*?)<\/ReferenceCode>/)
   if (!refMatch) {
@@ -200,4 +223,10 @@ export async function fetchIBFlexQuery(config: IBFlexConfig): Promise<IBFlexResu
     await new Promise(r => setTimeout(r, 3000 * (i + 1)))
   }
   return parseUploadedXml(xml)
+}
+
+export async function fetchIBFlexQuery(config: IBFlexConfig): Promise<IBFlexResult> {
+  const viaProxy = await fetchViaProxy(config)
+  if (viaProxy) return viaProxy
+  return fetchDirect(config)
 }

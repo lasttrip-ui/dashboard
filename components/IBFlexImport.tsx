@@ -65,7 +65,7 @@ export default function IBFlexImport({ onImport }: Props) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes("Failed to fetch") || msg.toLowerCase().includes("cors") || msg.includes("NetworkError")) {
         setTab("upload")
-        setErrorMsg("CORS bloqueado — usa la pestaña 'Subir XML'")
+        setErrorMsg("No se pudo conectar con IB — usa la pestaña 'Subir XML'")
       } else {
         setErrorMsg(msg)
       }
@@ -164,7 +164,7 @@ export default function IBFlexImport({ onImport }: Props) {
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 <div style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", fontSize: 12, color: "var(--amber)", display: "flex", gap: 8 }}>
                   <Info size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                  IB bloquea peticiones directas desde el navegador (CORS). Si falla, usa la pestaña "Subir XML".
+                  La petición se hace a través del servidor de la app (evita el bloqueo CORS de IB). Puede tardar hasta ~1 min mientras IB genera el extracto.
                 </div>
                 <label style={{ fontSize: 13, fontWeight: 500 }}>
                   Token
