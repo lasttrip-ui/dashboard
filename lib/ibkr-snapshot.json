@@ -1,12 +1,12 @@
 {
-  "lastUpdated": "2026-07-08T23:34:23.213Z",
+  "lastUpdated": "2026-07-09T23:42:33.584Z",
   "summary": {
     "currency": "EUR",
-    "netLiquidation": 35378.93,
-    "equityWithLoanValue": 35378.93,
+    "netLiquidation": 33655.64,
+    "equityWithLoanValue": 33655.64,
     "buyingPower": 0,
     "grossPositionValue": 79422.77,
-    "totalCashValue": 15530.44,
+    "totalCashValue": 15991.28,
     "availableFunds": -470.51,
     "initialMargin": 36706.74,
     "maintenanceMargin": 32935.29,
@@ -74,11 +74,11 @@
       "description": "DIAGEO PLC",
       "assetClass": "STK",
       "position": 90,
-      "marketPrice": 15.645,
-      "marketValue": 1408.05,
+      "marketPrice": 15.09,
+      "marketValue": 1358.1,
       "currency": "GBP",
       "averagePrice": 16.958922222,
-      "unrealizedPnl": -118.253
+      "unrealizedPnl": -168.203
     },
     {
       "contractId": 871851368,
@@ -86,11 +86,11 @@
       "description": "SIGENERGY TECHNOLOGY CO LT-H",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 345.4,
-      "marketValue": 34540,
+      "marketPrice": 328.6,
+      "marketValue": 32860,
       "currency": "HKD",
       "averagePrice": 568.926136,
-      "unrealizedPnl": -22352.6136
+      "unrealizedPnl": -24032.6136
     },
     {
       "contractId": 674088730,
@@ -98,11 +98,11 @@
       "description": "UBTECH ROBOTICS CORP LTD-H",
       "assetClass": "STK",
       "position": 50,
-      "marketPrice": 93.35,
-      "marketValue": 4667.5,
+      "marketPrice": 88.3,
+      "marketValue": 4415,
       "currency": "HKD",
       "averagePrice": 115.494605,
-      "unrealizedPnl": -1107.23025
+      "unrealizedPnl": -1359.73025
     },
     {
       "contractId": 4725951,
@@ -110,11 +110,11 @@
       "description": "AMERICAN EAGLE OUTFITTERS",
       "assetClass": "STK",
       "position": 3.8986,
-      "marketPrice": 16.52,
-      "marketValue": 64.4,
+      "marketPrice": 16.32,
+      "marketValue": 63.63,
       "currency": "USD",
       "averagePrice": 13.754698866,
-      "unrealizedPnl": 10.775931
+      "unrealizedPnl": 10.005931
     },
     {
       "contractId": 2560358,
@@ -122,11 +122,11 @@
       "description": "AES CORP",
       "assetClass": "STK",
       "position": 105.4638,
-      "marketPrice": 14.62,
-      "marketValue": 1541.88,
+      "marketPrice": 14.64,
+      "marketValue": 1543.99,
       "currency": "USD",
       "averagePrice": 10.487471881,
-      "unrealizedPnl": 435.831362
+      "unrealizedPnl": 437.941365
     },
     {
       "contractId": 470659032,
@@ -134,11 +134,11 @@
       "description": "ADVANCED FLOWER CAPITAL INC",
       "assetClass": "STK",
       "position": 13.8395,
-      "marketPrice": 2.97,
-      "marketValue": 41.1,
+      "marketPrice": 2.96,
+      "marketValue": 40.96,
       "currency": "USD",
       "averagePrice": 7.029919072,
-      "unrealizedPnl": -56.190564
+      "unrealizedPnl": -56.330566
     },
     {
       "contractId": 249963585,
@@ -146,11 +146,11 @@
       "description": "AGNC INVESTMENT CORP",
       "assetClass": "STK",
       "position": 3.6535,
-      "marketPrice": 11.12,
-      "marketValue": 40.63,
+      "marketPrice": 10.94,
+      "marketValue": 39.97,
       "currency": "USD",
       "averagePrice": 10.196802792,
-      "unrealizedPnl": 3.37598
+      "unrealizedPnl": 2.715981
     },
     {
       "contractId": 333352480,
@@ -158,11 +158,11 @@
       "description": "ALTIMMUNE INC",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 3.02,
-      "marketValue": 302,
+      "marketPrice": 3.11,
+      "marketValue": 311,
       "currency": "USD",
       "averagePrice": 5.7006074,
-      "unrealizedPnl": -268.06074
+      "unrealizedPnl": -259.06074
     },
     {
       "contractId": 31400554,
@@ -170,11 +170,11 @@
       "description": "ARES CAPITAL CORP",
       "assetClass": "STK",
       "position": 108.7454,
-      "marketPrice": 18.47,
-      "marketValue": 2008.53,
+      "marketPrice": 18.38,
+      "marketValue": 1998.74,
       "currency": "USD",
       "averagePrice": 22.03955256,
-      "unrealizedPnl": -388.169959
+      "unrealizedPnl": -397.959958
     },
     {
       "contractId": 44216351,
@@ -182,11 +182,11 @@
       "description": "B&amp;G FOODS INC",
       "assetClass": "STK",
       "position": 213.5124,
-      "marketPrice": 3.95,
-      "marketValue": 843.37,
+      "marketPrice": 3.93,
+      "marketValue": 839.1,
       "currency": "USD",
       "averagePrice": 4.329363512,
-      "unrealizedPnl": -81.002794
+      "unrealizedPnl": -85.272795
     },
     {
       "contractId": 776352706,
@@ -194,11 +194,11 @@
       "description": "WEBULL CORP",
       "assetClass": "STK",
       "position": 200,
-      "marketPrice": 7.27,
-      "marketValue": 1454,
+      "marketPrice": 7.24,
+      "marketValue": 1448,
       "currency": "USD",
       "averagePrice": 11.20704345,
-      "unrealizedPnl": -787.40869
+      "unrealizedPnl": -793.40869
     },
     {
       "contractId": 267748,
@@ -206,11 +206,11 @@
       "description": "COMCAST CORP-CLASS A",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 23.41,
-      "marketValue": 2341,
+      "marketPrice": 23.19,
+      "marketValue": 2319,
       "currency": "USD",
       "averagePrice": 24.8370395,
-      "unrealizedPnl": -142.70395
+      "unrealizedPnl": -164.70395
     },
     {
       "contractId": 696511292,
@@ -218,11 +218,11 @@
       "description": "DATAVAULT AI INC",
       "assetClass": "STK",
       "position": 500,
-      "marketPrice": 0.3518,
-      "marketValue": 175.9,
+      "marketPrice": 0.3561,
+      "marketValue": 178.05,
       "currency": "USD",
       "averagePrice": 0.685302572,
-      "unrealizedPnl": -166.751286
+      "unrealizedPnl": -164.601286
     },
     {
       "contractId": 813722945,
@@ -230,11 +230,11 @@
       "description": "GEMINI SPACE STATION INC-A",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 4.19,
-      "marketValue": 419,
+      "marketPrice": 4.22,
+      "marketValue": 422,
       "currency": "USD",
       "averagePrice": 9.2805454,
-      "unrealizedPnl": -509.05454
+      "unrealizedPnl": -506.05454
     },
     {
       "contractId": 208813719,
@@ -242,11 +242,11 @@
       "description": "ALPHABET INC-CL A",
       "assetClass": "STK",
       "position": 5.0168,
-      "marketPrice": 367.03,
-      "marketValue": 1841.32,
+      "marketPrice": 361.92,
+      "marketValue": 1815.68,
       "currency": "USD",
       "averagePrice": 149.636225482,
-      "unrealizedPnl": 1090.624984
+      "unrealizedPnl": 1064.984985
     },
     {
       "contractId": 677037673,
@@ -254,11 +254,11 @@
       "description": "ISHARES BITCOIN TRUST ETF",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 36.15,
-      "marketValue": 3615,
+      "marketPrice": 35.23,
+      "marketValue": 3523,
       "currency": "USD",
       "averagePrice": 42.65052282,
-      "unrealizedPnl": -650.052282
+      "unrealizedPnl": -742.052282
     },
     {
       "contractId": 496414757,
@@ -266,11 +266,11 @@
       "description": "INDIE SEMICONDUCTOR INC-A",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 4.12,
-      "marketValue": 412,
+      "marketPrice": 4.37,
+      "marketValue": 437,
       "currency": "USD",
       "averagePrice": 3.0505665,
-      "unrealizedPnl": 106.94335
+      "unrealizedPnl": 131.94335
     },
     {
       "contractId": 854083840,
@@ -278,11 +278,11 @@
       "description": "INFLEQTION INC",
       "assetClass": "STK",
       "position": 200,
-      "marketPrice": 11.66,
-      "marketValue": 2332,
+      "marketPrice": 11.51,
+      "marketValue": 2302,
       "currency": "USD",
       "averagePrice": 12.71032645,
-      "unrealizedPnl": -210.06529
+      "unrealizedPnl": -240.06529
     },
     {
       "contractId": 14765981,
@@ -290,11 +290,11 @@
       "description": "JETBLUE AIRWAYS CORP",
       "assetClass": "STK",
       "position": 18.4364,
-      "marketPrice": 5.72,
-      "marketValue": 105.46,
+      "marketPrice": 5.58,
+      "marketValue": 102.88,
       "currency": "USD",
       "averagePrice": 4.978227474,
-      "unrealizedPnl": 13.679407
+      "unrealizedPnl": 11.099407
     },
     {
       "contractId": 199169586,
@@ -302,11 +302,11 @@
       "description": "KRAFT HEINZ CO/THE",
       "assetClass": "STK",
       "position": 208.5107,
-      "marketPrice": 25.3,
-      "marketValue": 5275.32,
+      "marketPrice": 24.92,
+      "marketValue": 5196.09,
       "currency": "USD",
       "averagePrice": 24.591690988,
-      "unrealizedPnl": 147.689297
+      "unrealizedPnl": 68.459297
     },
     {
       "contractId": 629043863,
@@ -314,11 +314,11 @@
       "description": "KENVUE INC",
       "assetClass": "STK",
       "position": 102.9899,
-      "marketPrice": 19.78,
-      "marketValue": 2037.14,
+      "marketPrice": 19.29,
+      "marketValue": 1986.68,
       "currency": "USD",
       "averagePrice": 16.941010905,
-      "unrealizedPnl": 292.386981
+      "unrealizedPnl": 241.926981
     },
     {
       "contractId": 9240,
@@ -326,11 +326,11 @@
       "description": "LTC PROPERTIES INC",
       "assetClass": "STK",
       "position": 5.4363,
-      "marketPrice": 39.23,
-      "marketValue": 213.27,
+      "marketPrice": 39.07,
+      "marketValue": 212.4,
       "currency": "USD",
       "averagePrice": 33.449117047,
-      "unrealizedPnl": 31.430563
+      "unrealizedPnl": 30.560565
     },
     {
       "contractId": 74866700,
@@ -338,11 +338,11 @@
       "description": "LYONDELLBASELL INDU-CL A",
       "assetClass": "STK",
       "position": 5.4277,
-      "marketPrice": 54.6,
-      "marketValue": 296.35,
+      "marketPrice": 55.72,
+      "marketValue": 302.43,
       "currency": "USD",
       "averagePrice": 51.666349835,
-      "unrealizedPnl": 15.920553
+      "unrealizedPnl": 22.000553
     },
     {
       "contractId": 46567665,
@@ -350,11 +350,11 @@
       "description": "MAIN STREET CAPITAL CORP",
       "assetClass": "STK",
       "position": 13.2032,
-      "marketPrice": 52.41,
-      "marketValue": 691.98,
+      "marketPrice": 51.05,
+      "marketValue": 674.02,
       "currency": "USD",
       "averagePrice": 41.809178154,
-      "unrealizedPnl": 139.965057
+      "unrealizedPnl": 122.005062
     },
     {
       "contractId": 4815747,
@@ -362,11 +362,11 @@
       "description": "NVIDIA CORP",
       "assetClass": "STK",
       "position": 3.004,
-      "marketPrice": 196.93,
-      "marketValue": 591.58,
+      "marketPrice": 204.12,
+      "marketValue": 613.18,
       "currency": "USD",
       "averagePrice": 27.133565246,
-      "unrealizedPnl": 510.070769
+      "unrealizedPnl": 531.670769
     },
     {
       "contractId": 455415330,
@@ -374,11 +374,11 @@
       "description": "ONDAS INC",
       "assetClass": "STK",
       "position": 100,
-      "marketPrice": 7.35,
-      "marketValue": 735,
+      "marketPrice": 7.52,
+      "marketValue": 752,
       "currency": "USD",
       "averagePrice": 12.2305125,
-      "unrealizedPnl": -488.05125
+      "unrealizedPnl": -471.05125
     },
     {
       "contractId": 11031,
@@ -386,11 +386,11 @@
       "description": "PFIZER INC",
       "assetClass": "STK",
       "position": 112.8158,
-      "marketPrice": 24.07,
-      "marketValue": 2715.48,
+      "marketPrice": 24.05,
+      "marketValue": 2713.22,
       "currency": "USD",
       "averagePrice": 26.242162117,
-      "unrealizedPnl": -245.050514
+      "unrealizedPnl": -247.310515
     },
     {
       "contractId": 86635186,
@@ -398,11 +398,11 @@
       "description": "PENNANTPARK FLOATING RATE CA",
       "assetClass": "STK",
       "position": 18.9843,
-      "marketPrice": 7.19,
-      "marketValue": 136.5,
+      "marketPrice": 7.13,
+      "marketValue": 135.36,
       "currency": "USD",
       "averagePrice": 11.168105013,
-      "unrealizedPnl": -75.518655
+      "unrealizedPnl": -76.658654
     },
     {
       "contractId": 257944575,
@@ -410,11 +410,11 @@
       "description": "PARK HOTELS &amp; RESORTS INC",
       "assetClass": "STK",
       "position": 10.1296,
-      "marketPrice": 14.16,
-      "marketValue": 143.44,
+      "marketPrice": 13.76,
+      "marketValue": 139.38,
       "currency": "USD",
       "averagePrice": 10.930426177,
-      "unrealizedPnl": 32.719155
+      "unrealizedPnl": 28.659155
     },
     {
       "contractId": 518304339,
@@ -422,11 +422,11 @@
       "description": "SEVEN HILLS REALTY TRUST",
       "assetClass": "STK",
       "position": 16.9119,
-      "marketPrice": 8.38,
-      "marketValue": 141.72,
+      "marketPrice": 8.36,
+      "marketValue": 141.38,
       "currency": "USD",
       "averagePrice": 11.82705793,
-      "unrealizedPnl": -58.298021
+      "unrealizedPnl": -58.638022
     },
     {
       "contractId": 494162724,
@@ -434,11 +434,11 @@
       "description": "SOFI TECHNOLOGIES INC",
       "assetClass": "STK",
       "position": 1.2315,
-      "marketPrice": 17.75,
-      "marketValue": 21.86,
+      "marketPrice": 17.73,
+      "marketValue": 21.83,
       "currency": "USD",
       "averagePrice": 16.401666261,
-      "unrealizedPnl": 1.661348
+      "unrealizedPnl": 1.631348
     },
     {
       "contractId": 713926070,
@@ -446,11 +446,11 @@
       "description": "SUNRISE REALTY TRUST INC",
       "assetClass": "STK",
       "position": 4.503,
-      "marketPrice": 7.92,
-      "marketValue": 35.66,
+      "marketPrice": 7.88,
+      "marketValue": 35.48,
       "currency": "USD",
       "averagePrice": 10.498825894,
-      "unrealizedPnl": -11.616213
+      "unrealizedPnl": -11.796212
     },
     {
       "contractId": 477167078,
@@ -458,11 +458,11 @@
       "description": "TUYA INC",
       "assetClass": "STK",
       "position": 212.9671,
-      "marketPrice": 1.96,
-      "marketValue": 417.42,
+      "marketPrice": 1.87,
+      "marketValue": 398.25,
       "currency": "USD",
       "averagePrice": 1.641518145,
-      "unrealizedPnl": 67.83064
+      "unrealizedPnl": 48.66064
     },
     {
       "contractId": 60581038,
@@ -470,11 +470,11 @@
       "description": "VALE SA-SP ADR",
       "assetClass": "STK",
       "position": 16.7543,
-      "marketPrice": 14.69,
-      "marketValue": 246.12,
+      "marketPrice": 14.05,
+      "marketValue": 235.4,
       "currency": "USD",
       "averagePrice": 11.564103006,
-      "unrealizedPnl": 52.371549
+      "unrealizedPnl": 41.651549
     },
     {
       "contractId": 292080616,
@@ -482,11 +482,11 @@
       "description": "VICI PROPERTIES INC",
       "assetClass": "STK",
       "position": 202.7233,
-      "marketPrice": 26.77,
-      "marketValue": 5426.9,
+      "marketPrice": 26.09,
+      "marketValue": 5289.05,
       "currency": "USD",
       "averagePrice": 28.199102466,
-      "unrealizedPnl": -289.715109
+      "unrealizedPnl": -427.565108
     },
     {
       "contractId": 87741352,
@@ -494,11 +494,11 @@
       "description": "VOC ENERGY TRUST",
       "assetClass": "STK",
       "position": 118.5836,
-      "marketPrice": 2.965,
-      "marketValue": 351.6,
+      "marketPrice": 3.075,
+      "marketValue": 364.64,
       "currency": "USD",
       "averagePrice": 3.210409686,
-      "unrealizedPnl": -29.101937
+      "unrealizedPnl": -16.061938
     },
     {
       "contractId": 792307606,
@@ -506,11 +506,11 @@
       "description": "WALLBOX NV",
       "assetClass": "STK",
       "position": 5,
-      "marketPrice": 5.38,
-      "marketValue": 26.9,
+      "marketPrice": 5.15,
+      "marketValue": 25.75,
       "currency": "USD",
       "averagePrice": 27.9871,
-      "unrealizedPnl": -113.0355
+      "unrealizedPnl": -114.1855
     },
     {
       "contractId": 495763832,
@@ -518,11 +518,11 @@
       "description": "ZETA GLOBAL HOLDINGS CORP-A",
       "assetClass": "STK",
       "position": 200,
-      "marketPrice": 21.87,
-      "marketValue": 4374,
+      "marketPrice": 21.66,
+      "marketValue": 4332,
       "currency": "USD",
       "averagePrice": 17.90192142,
-      "unrealizedPnl": 793.615716
+      "unrealizedPnl": 751.615716
     },
     {
       "contractId": 832609690,
@@ -530,11 +530,11 @@
       "description": "ACHR 17JUL26 5 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 0.235,
-      "marketValue": 23.5,
+      "marketPrice": 0.175,
+      "marketValue": 17.5,
       "currency": "USD",
       "averagePrice": 3.470484,
-      "unrealizedPnl": -323.5484
+      "unrealizedPnl": -329.5484
     },
     {
       "contractId": 814214828,
@@ -542,11 +542,11 @@
       "description": "ASPI 21JAN28 5 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 3,
-      "marketValue": 300,
+      "marketPrice": 2.79,
+      "marketValue": 279,
       "currency": "USD",
       "averagePrice": 4.1805075,
-      "unrealizedPnl": -118.05075
+      "unrealizedPnl": -139.05075
     },
     {
       "contractId": 842116753,
@@ -554,11 +554,11 @@
       "description": "BABA 20NOV26 150 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 1.6145,
-      "marketValue": 161.45,
+      "marketPrice": 3.1473,
+      "marketValue": 314.73,
       "currency": "USD",
       "averagePrice": 26.4569875,
-      "unrealizedPnl": -2484.24875
+      "unrealizedPnl": -2330.96875
     },
     {
       "contractId": 751847664,
@@ -566,11 +566,11 @@
       "description": "EOSE1 15JAN27 10 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 0.6995,
-      "marketValue": 69.95,
+      "marketPrice": 0.5641,
+      "marketValue": 56.41,
       "currency": "USD",
       "averagePrice": 5.5105125,
-      "unrealizedPnl": -481.10125
+      "unrealizedPnl": -494.64125
     },
     {
       "contractId": 707208870,
@@ -578,11 +578,11 @@
       "description": "ISRG 18DEC26 440 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 44.5066,
-      "marketValue": 4450.66,
+      "marketPrice": 37.6305,
+      "marketValue": 3763.05,
       "currency": "USD",
       "averagePrice": 49.550333,
-      "unrealizedPnl": -504.3733
+      "unrealizedPnl": -1191.9833
     },
     {
       "contractId": 728881506,
@@ -590,11 +590,11 @@
       "description": "JD 15JAN27 20 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 8.009,
-      "marketValue": 800.9,
+      "marketPrice": 8.7473,
+      "marketValue": 874.73,
       "currency": "USD",
       "averagePrice": 10.110166,
-      "unrealizedPnl": -210.1166
+      "unrealizedPnl": -136.2866
     },
     {
       "contractId": 776859393,
@@ -602,11 +602,11 @@
       "description": "KOS 15JAN27 2.5 C",
       "assetClass": "OPT",
       "position": 2,
-      "marketPrice": 0.4755,
-      "marketValue": 95.1,
+      "marketPrice": 0.4614,
+      "marketValue": 92.28,
       "currency": "USD",
       "averagePrice": 0.7270075,
-      "unrealizedPnl": -50.3015
+      "unrealizedPnl": -53.1215
     },
     {
       "contractId": 827010641,
@@ -614,11 +614,11 @@
       "description": "NU 18DEC26 15 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 1.24,
-      "marketValue": 124,
+      "marketPrice": 1.115,
+      "marketValue": 111.5,
       "currency": "USD",
       "averagePrice": 2.3905045,
-      "unrealizedPnl": -115.05045
+      "unrealizedPnl": -127.55045
     },
     {
       "contractId": 676631091,
@@ -626,11 +626,11 @@
       "description": "PYPL 18DEC26 42.5 C",
       "assetClass": "OPT",
       "position": 2,
-      "marketPrice": 6.9494,
-      "marketValue": 1389.88,
+      "marketPrice": 6.1203,
+      "marketValue": 1224.06,
       "currency": "USD",
       "averagePrice": 6.70375,
-      "unrealizedPnl": 49.13
+      "unrealizedPnl": -116.69
     },
     {
       "contractId": 856473131,
@@ -638,23 +638,35 @@
       "description": "SPCE 16OCT26 4 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 0.312,
-      "marketValue": 31.2,
+      "marketPrice": 0.32,
+      "marketValue": 32,
       "currency": "USD",
       "averagePrice": 2.0169825,
-      "unrealizedPnl": -170.49825
+      "unrealizedPnl": -169.69825
     },
     {
-      "contractId": 875409734,
+      "contractId": 898727059,
       "symbol": "SPX",
-      "description": "SPX 17JUL26 7660 C",
+      "description": "SPXW 05AUG26 7330 P",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 4.7076,
-      "marketValue": 470.76,
+      "marketPrice": 59.0547,
+      "marketValue": 5905.47,
       "currency": "USD",
-      "averagePrice": 11.2581075,
-      "unrealizedPnl": -655.05075
+      "averagePrice": 76.2563028,
+      "unrealizedPnl": -1720.16028
+    },
+    {
+      "contractId": 899195379,
+      "symbol": "SPX",
+      "description": "SPXW 05AUG26 7610 C",
+      "assetClass": "OPT",
+      "position": 1,
+      "marketPrice": 53.2206,
+      "marketValue": 5322.06,
+      "currency": "USD",
+      "averagePrice": 45.7063028,
+      "unrealizedPnl": 751.42972
     },
     {
       "contractId": 838076819,
@@ -662,11 +674,11 @@
       "description": "TSLL 15JAN27 12 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 3.811,
-      "marketValue": 381.1,
+      "marketPrice": 3.233,
+      "marketValue": 323.3,
       "currency": "USD",
       "averagePrice": 4.9105075,
-      "unrealizedPnl": -109.95075
+      "unrealizedPnl": -167.75075
     },
     {
       "contractId": 814400761,
@@ -674,11 +686,11 @@
       "description": "VERI 15JAN27 2.5 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 0.1795,
-      "marketValue": 17.95,
+      "marketPrice": 0.1653,
+      "marketValue": 16.53,
       "currency": "USD",
       "averagePrice": 3.040141,
-      "unrealizedPnl": -286.0641
+      "unrealizedPnl": -287.4841
     },
     {
       "contractId": 877994678,
@@ -686,11 +698,11 @@
       "description": "XE 16OCT26 30 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 1.0275,
-      "marketValue": 102.75,
+      "marketPrice": 1.0061,
+      "marketValue": 100.61,
       "currency": "USD",
       "averagePrice": 10.6324825,
-      "unrealizedPnl": -960.49825
+      "unrealizedPnl": -962.63825
     },
     {
       "contractId": 814414105,
@@ -698,11 +710,11 @@
       "description": "ZENA 21JAN28 2.5 C",
       "assetClass": "OPT",
       "position": 1,
-      "marketPrice": 0.4,
-      "marketValue": 40,
+      "marketPrice": 0.4099,
+      "marketValue": 40.99,
       "currency": "USD",
       "averagePrice": 2.6724875,
-      "unrealizedPnl": -227.24875
+      "unrealizedPnl": -226.25875
     },
     {
       "contractId": 846117344,
@@ -710,11 +722,11 @@
       "description": "DGE 18DEC26 18.75 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.48,
-      "marketValue": -3480,
+      "marketPrice": 3.96,
+      "marketValue": -3960,
       "currency": "GBP",
       "averagePrice": 4.9486,
-      "unrealizedPnl": 1468.6
+      "unrealizedPnl": 988.6
     },
     {
       "contractId": 832607872,
@@ -734,11 +746,11 @@
       "description": "ACHR 15JAN27 7 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 2.6584,
-      "marketValue": -265.84,
+      "marketPrice": 2.6298,
+      "marketValue": -262.98,
       "currency": "USD",
       "averagePrice": 2.5794606,
-      "unrealizedPnl": -7.89394
+      "unrealizedPnl": -5.03394
     },
     {
       "contractId": 728821499,
@@ -746,11 +758,11 @@
       "description": "AES 15JAN27 17 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.02,
-      "marketValue": -2,
+      "marketPrice": 0.001,
+      "marketValue": -0.1,
       "currency": "USD",
       "averagePrice": 0.43936209,
-      "unrealizedPnl": 41.936209
+      "unrealizedPnl": 43.836209
     },
     {
       "contractId": 728823735,
@@ -758,11 +770,11 @@
       "description": "ALT 15JAN27 4 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.3817,
-      "marketValue": -138.17,
+      "marketPrice": 1.3467,
+      "marketValue": -134.67,
       "currency": "USD",
       "averagePrice": 1.8493676,
-      "unrealizedPnl": 46.76676
+      "unrealizedPnl": 50.26676
     },
     {
       "contractId": 893318918,
@@ -770,11 +782,11 @@
       "description": "ARCC 21AUG26 19 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.35,
-      "marketValue": -35,
+      "marketPrice": 0.375,
+      "marketValue": -37.5,
       "currency": "USD",
       "averagePrice": 0.22997986,
-      "unrealizedPnl": -12.002014
+      "unrealizedPnl": -14.502014
     },
     {
       "contractId": 816200799,
@@ -782,11 +794,11 @@
       "description": "ARE 17JUL26 50 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.531,
-      "marketValue": -153.1,
+      "marketPrice": 2.851,
+      "marketValue": -285.1,
       "currency": "USD",
       "averagePrice": 4.8394546,
-      "unrealizedPnl": 330.84546
+      "unrealizedPnl": 198.84546
     },
     {
       "contractId": 891130199,
@@ -794,11 +806,11 @@
       "description": "ASPI 31JUL26 9 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.0765,
-      "marketValue": -7.65,
+      "marketPrice": 0.0961,
+      "marketValue": -9.61,
       "currency": "USD",
       "averagePrice": 0.52997368,
-      "unrealizedPnl": 45.347368
+      "unrealizedPnl": 43.387368
     },
     {
       "contractId": 839619701,
@@ -806,11 +818,11 @@
       "description": "ASTS 21AUG26 60 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 4.5,
-      "marketValue": -450,
+      "marketPrice": 4.275,
+      "marketValue": -427.5,
       "currency": "USD",
       "averagePrice": 4.49947139,
-      "unrealizedPnl": -0.052861
+      "unrealizedPnl": 22.447139
     },
     {
       "contractId": 843246569,
@@ -818,11 +830,11 @@
       "description": "ASTS 18SEP26 95 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 28.4027,
-      "marketValue": -2840.27,
+      "marketPrice": 27.6,
+      "marketValue": -2760,
       "currency": "USD",
       "averagePrice": 22.01253099,
-      "unrealizedPnl": -639.016901
+      "unrealizedPnl": -558.746901
     },
     {
       "contractId": 843248583,
@@ -830,11 +842,11 @@
       "description": "ASTS 16OCT26 60 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 8.375,
-      "marketValue": -837.5,
+      "marketPrice": 8.15,
+      "marketValue": -815,
       "currency": "USD",
       "averagePrice": 13.0394796,
-      "unrealizedPnl": 466.44796
+      "unrealizedPnl": 488.94796
     },
     {
       "contractId": 893339037,
@@ -842,11 +854,11 @@
       "description": "BABA 24JUL26 99 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.7256,
-      "marketValue": -372.56,
+      "marketPrice": 11.0474,
+      "marketValue": -1104.74,
       "currency": "USD",
       "averagePrice": 3.46938791,
-      "unrealizedPnl": -25.621209
+      "unrealizedPnl": -757.801209
     },
     {
       "contractId": 860146923,
@@ -854,11 +866,11 @@
       "description": "BABA 16JUN28 140 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 48.878,
-      "marketValue": -4887.8,
+      "marketPrice": 43.2447,
+      "marketValue": -4324.47,
       "currency": "USD",
       "averagePrice": 45.91203865,
-      "unrealizedPnl": -296.596135
+      "unrealizedPnl": 266.733865
     },
     {
       "contractId": 852726756,
@@ -866,11 +878,11 @@
       "description": "BULL 18SEP26 10 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 0.225,
-      "marketValue": -45,
+      "marketPrice": 0.23,
+      "marketValue": -46,
       "currency": "USD",
       "averagePrice": 0.27312833,
-      "unrealizedPnl": 9.625666
+      "unrealizedPnl": 8.625666
     },
     {
       "contractId": 884077101,
@@ -878,11 +890,11 @@
       "description": "CMCSA 21AUG26 24 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.105,
-      "marketValue": -110.5,
+      "marketPrice": 1.075,
+      "marketValue": -107.5,
       "currency": "USD",
       "averagePrice": 0.8322673,
-      "unrealizedPnl": -27.27327
+      "unrealizedPnl": -24.27327
     },
     {
       "contractId": 839755611,
@@ -890,11 +902,11 @@
       "description": "ENPH 21AUG26 35 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 2.135,
-      "marketValue": -213.5,
+      "marketPrice": 2.21,
+      "marketValue": -221,
       "currency": "USD",
       "averagePrice": 4.84288469,
-      "unrealizedPnl": 270.788469
+      "unrealizedPnl": 263.288469
     },
     {
       "contractId": 891177954,
@@ -902,11 +914,11 @@
       "description": "EOSE1 31JUL26 8 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.3502,
-      "marketValue": -35.02,
+      "marketPrice": 0.0192,
+      "marketValue": -1.92,
       "currency": "USD",
       "averagePrice": 0.6594708,
-      "unrealizedPnl": 30.92708
+      "unrealizedPnl": 64.02708
     },
     {
       "contractId": 865357160,
@@ -914,11 +926,11 @@
       "description": "EOSE1 20NOV26 7 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.1409,
-      "marketValue": -314.09,
+      "marketPrice": 3.0863,
+      "marketValue": -308.63,
       "currency": "USD",
       "averagePrice": 2.53293228,
-      "unrealizedPnl": -60.796772
+      "unrealizedPnl": -55.336772
     },
     {
       "contractId": 757294306,
@@ -926,11 +938,11 @@
       "description": "EOSE1 15JAN27 12.5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 7.9834,
-      "marketValue": -798.34,
+      "marketPrice": 8.1972,
+      "marketValue": -819.72,
       "currency": "USD",
       "averagePrice": 4.9594546,
-      "unrealizedPnl": -302.39454
+      "unrealizedPnl": -323.77454
     },
     {
       "contractId": 869047716,
@@ -938,11 +950,11 @@
       "description": "IBIT 21AUG26 39 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.88,
-      "marketValue": -88,
+      "marketPrice": 0.62,
+      "marketValue": -62,
       "currency": "USD",
       "averagePrice": 0.49948359,
-      "unrealizedPnl": -38.051641
+      "unrealizedPnl": -12.051641
     },
     {
       "contractId": 752176212,
@@ -950,11 +962,11 @@
       "description": "INDI 15JAN27 5.5 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.8085,
-      "marketValue": -80.85,
+      "marketPrice": 0.9185,
+      "marketValue": -91.85,
       "currency": "USD",
       "averagePrice": 0.3799876,
-      "unrealizedPnl": -42.85124
+      "unrealizedPnl": -53.85124
     },
     {
       "contractId": 832662370,
@@ -962,11 +974,11 @@
       "description": "INFQ 17JUL26 17.5 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 0.125,
-      "marketValue": -25,
+      "marketPrice": 0.0756,
+      "marketValue": -15.12,
       "currency": "USD",
       "averagePrice": 0.98296421,
-      "unrealizedPnl": 171.592842
+      "unrealizedPnl": 181.472842
     },
     {
       "contractId": 707209036,
@@ -974,11 +986,11 @@
       "description": "ISRG 18DEC26 470 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 32.85,
-      "marketValue": -3285,
+      "marketPrice": 27,
+      "marketValue": -2700,
       "currency": "USD",
       "averagePrice": 38.85686598,
-      "unrealizedPnl": 600.686598
+      "unrealizedPnl": 1185.686598
     },
     {
       "contractId": 889422766,
@@ -986,11 +998,11 @@
       "description": "JBLU 21AUG26 5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.245,
-      "marketValue": -24.5,
+      "marketPrice": 0.255,
+      "marketValue": -25.5,
       "currency": "USD",
       "averagePrice": 0.20945507,
-      "unrealizedPnl": -3.554493
+      "unrealizedPnl": -4.554493
     },
     {
       "contractId": 893596381,
@@ -998,11 +1010,11 @@
       "description": "JD 21AUG26 29 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.8273,
-      "marketValue": -82.73,
+      "marketPrice": 1.0958,
+      "marketValue": -109.58,
       "currency": "USD",
       "averagePrice": 0.49947409,
-      "unrealizedPnl": -32.782591
+      "unrealizedPnl": -59.632591
     },
     {
       "contractId": 861566703,
@@ -1010,11 +1022,11 @@
       "description": "KHC 17JUN27 25 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 3.2168,
-      "marketValue": -643.36,
+      "marketPrice": 2.8541,
+      "marketValue": -570.82,
       "currency": "USD",
       "averagePrice": 2.61301033,
-      "unrealizedPnl": -120.757934
+      "unrealizedPnl": -48.217934
     },
     {
       "contractId": 832845936,
@@ -1022,11 +1034,11 @@
       "description": "KOS 17JUL26 3 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 0.0117,
-      "marketValue": -2.34,
+      "marketPrice": 0.0091,
+      "marketValue": -1.82,
       "currency": "USD",
       "averagePrice": 0.11295713,
-      "unrealizedPnl": 20.251426
+      "unrealizedPnl": 20.771426
     },
     {
       "contractId": 728884549,
@@ -1034,11 +1046,11 @@
       "description": "KOS 15JAN27 2 P",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 0.35,
-      "marketValue": -70,
+      "marketPrice": 0.325,
+      "marketValue": -65,
       "currency": "USD",
       "averagePrice": 0.26295404,
-      "unrealizedPnl": -17.409192
+      "unrealizedPnl": -12.409192
     },
     {
       "contractId": 889447949,
@@ -1046,11 +1058,11 @@
       "description": "KVUE 24JUL26 18.5 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.5695,
-      "marketValue": -156.95,
+      "marketPrice": 0.9857,
+      "marketValue": -98.57,
       "currency": "USD",
       "averagePrice": 0.40945095,
-      "unrealizedPnl": -116.004905
+      "unrealizedPnl": -57.624905
     },
     {
       "contractId": 891257739,
@@ -1058,11 +1070,11 @@
       "description": "NU 31JUL26 12.5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.155,
-      "marketValue": -15.5,
+      "marketPrice": 0.2,
+      "marketValue": -20,
       "currency": "USD",
       "averagePrice": 0.44297533,
-      "unrealizedPnl": 28.797533
+      "unrealizedPnl": 24.297533
     },
     {
       "contractId": 882098677,
@@ -1070,11 +1082,11 @@
       "description": "NU 21AUG26 15 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.42,
-      "marketValue": -42,
+      "marketPrice": 0.33,
+      "marketValue": -33,
       "currency": "USD",
       "averagePrice": 0.3219778,
-      "unrealizedPnl": -9.80222
+      "unrealizedPnl": -0.80222
     },
     {
       "contractId": 827011368,
@@ -1082,11 +1094,11 @@
       "description": "NU 18DEC26 15 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 2.338,
-      "marketValue": -233.8,
+      "marketPrice": 2.5037,
+      "marketValue": -250.37,
       "currency": "USD",
       "averagePrice": 2.1494181,
-      "unrealizedPnl": -18.85819
+      "unrealizedPnl": -35.42819
     },
     {
       "contractId": 846456258,
@@ -1094,11 +1106,11 @@
       "description": "ONDS 18SEP26 15 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.1811,
-      "marketValue": -18.11,
+      "marketPrice": 0.1806,
+      "marketValue": -18.06,
       "currency": "USD",
       "averagePrice": 2.74292795,
-      "unrealizedPnl": 256.182795
+      "unrealizedPnl": 256.232795
     },
     {
       "contractId": 877391842,
@@ -1106,11 +1118,11 @@
       "description": "OWL 19FEB27 12 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.4479,
-      "marketValue": -344.79,
+      "marketPrice": 3.5234,
+      "marketValue": -352.34,
       "currency": "USD",
       "averagePrice": 3.30939121,
-      "unrealizedPnl": -13.850879
+      "unrealizedPnl": -21.400879
     },
     {
       "contractId": 889495495,
@@ -1118,11 +1130,11 @@
       "description": "PFE 24JUL26 27 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.0151,
-      "marketValue": -1.51,
+      "marketPrice": 0.0203,
+      "marketValue": -2.03,
       "currency": "USD",
       "averagePrice": 0.34297739,
-      "unrealizedPnl": 32.787739
+      "unrealizedPnl": 32.267739
     },
     {
       "contractId": 747416319,
@@ -1130,11 +1142,11 @@
       "description": "PLTR 18DEC26 120 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 12.5,
-      "marketValue": -1250,
+      "marketPrice": 13.175,
+      "marketValue": -1317.5,
       "currency": "USD",
       "averagePrice": 15.44266633,
-      "unrealizedPnl": 294.266633
+      "unrealizedPnl": 226.766633
     },
     {
       "contractId": 891207779,
@@ -1142,11 +1154,11 @@
       "description": "PYPL 31JUL26 47 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 1.86,
-      "marketValue": -372,
+      "marketPrice": 1.35,
+      "marketValue": -270,
       "currency": "USD",
       "averagePrice": 1.11296153,
-      "unrealizedPnl": -149.407694
+      "unrealizedPnl": -47.407694
     },
     {
       "contractId": 676632250,
@@ -1154,11 +1166,11 @@
       "description": "PYPL 18DEC26 42.5 P",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 3.275,
-      "marketValue": -655,
+      "marketPrice": 3.675,
+      "marketValue": -735,
       "currency": "USD",
       "averagePrice": 6.0562171,
-      "unrealizedPnl": 556.24342
+      "unrealizedPnl": 476.24342
     },
     {
       "contractId": 843113132,
@@ -1166,11 +1178,11 @@
       "description": "SLV 31DEC26 67.5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 15.3673,
-      "marketValue": -1536.73,
+      "marketPrice": 16.5915,
+      "marketValue": -1659.15,
       "currency": "USD",
       "averagePrice": 11.3394546,
-      "unrealizedPnl": -402.78454
+      "unrealizedPnl": -525.20454
     },
     {
       "contractId": 843113529,
@@ -1178,11 +1190,11 @@
       "description": "SLV 31DEC26 71.5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 18.7777,
-      "marketValue": -1877.77,
+      "marketPrice": 20.0913,
+      "marketValue": -2009.13,
       "currency": "USD",
       "averagePrice": 12.8529796,
-      "unrealizedPnl": -592.47204
+      "unrealizedPnl": -723.83204
     },
     {
       "contractId": 835966700,
@@ -1190,11 +1202,11 @@
       "description": "SLV 15JAN27 66 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 14.332,
-      "marketValue": -1433.2,
+      "marketPrice": 15.4956,
+      "marketValue": -1549.56,
       "currency": "USD",
       "averagePrice": 11.1429796,
-      "unrealizedPnl": -318.90204
+      "unrealizedPnl": -435.26204
     },
     {
       "contractId": 835967931,
@@ -1202,11 +1214,11 @@
       "description": "SLV 21JAN28 68 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 19.3481,
-      "marketValue": -1934.81,
+      "marketPrice": 20.2425,
+      "marketValue": -2024.25,
       "currency": "USD",
       "averagePrice": 18.0729876,
-      "unrealizedPnl": -127.51124
+      "unrealizedPnl": -216.95124
     },
     {
       "contractId": 889478318,
@@ -1214,23 +1226,35 @@
       "description": "SPCE 24JUL26 6.5 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.0153,
-      "marketValue": -1.53,
+      "marketPrice": 0.0032,
+      "marketValue": -0.32,
       "currency": "USD",
       "averagePrice": 1.36295638,
-      "unrealizedPnl": 134.765638
+      "unrealizedPnl": 135.975638
     },
     {
-      "contractId": 826249073,
+      "contractId": 898066599,
       "symbol": "SPX",
-      "description": "SPX 17JUL26 7650 C",
+      "description": "SPXW 05AUG26 7340 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 5.9493,
-      "marketValue": -594.93,
+      "marketPrice": 61.0519,
+      "marketValue": -6105.19,
       "currency": "USD",
-      "averagePrice": 12.7218925,
-      "unrealizedPnl": 677.25925
+      "averagePrice": 78.7036972,
+      "unrealizedPnl": 1765.17972
+    },
+    {
+      "contractId": 896807918,
+      "symbol": "SPX",
+      "description": "SPXW 05AUG26 7600 C",
+      "assetClass": "OPT",
+      "position": -1,
+      "marketPrice": 57.7209,
+      "marketValue": -5772.09,
+      "currency": "USD",
+      "averagePrice": 49.2936972,
+      "unrealizedPnl": -842.72028
     },
     {
       "contractId": 728976044,
@@ -1238,11 +1262,11 @@
       "description": "TEM 15JAN27 45 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 5.5492,
-      "marketValue": -554.92,
+      "marketPrice": 5.5062,
+      "marketValue": -550.62,
       "currency": "USD",
       "averagePrice": 10.1029796,
-      "unrealizedPnl": 455.37796
+      "unrealizedPnl": 459.67796
     },
     {
       "contractId": 893925550,
@@ -1250,11 +1274,11 @@
       "description": "TSLL 21AUG26 17 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.555,
-      "marketValue": -55.5,
+      "marketPrice": 0.4708,
+      "marketValue": -47.08,
       "currency": "USD",
       "averagePrice": 1.09947123,
-      "unrealizedPnl": 54.447123
+      "unrealizedPnl": 62.867123
     },
     {
       "contractId": 838077974,
@@ -1262,11 +1286,11 @@
       "description": "TSLL 15JAN27 12 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 2.76,
-      "marketValue": -276,
+      "marketPrice": 2.98,
+      "marketValue": -298,
       "currency": "USD",
       "averagePrice": 2.88939986,
-      "unrealizedPnl": 12.939986
+      "unrealizedPnl": -9.060014
     },
     {
       "contractId": 893841548,
@@ -1274,11 +1298,11 @@
       "description": "VICI 21AUG26 27.5 C",
       "assetClass": "OPT",
       "position": -2,
-      "marketPrice": 0.525,
-      "marketValue": -105,
+      "marketPrice": 0.275,
+      "marketValue": -55,
       "currency": "USD",
       "averagePrice": 0.47297471,
-      "unrealizedPnl": -10.405058
+      "unrealizedPnl": 39.594942
     },
     {
       "contractId": 877994675,
@@ -1286,11 +1310,11 @@
       "description": "XE 16OCT26 25 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.525,
-      "marketValue": -152.5,
+      "marketPrice": 1.5606,
+      "marketValue": -156.06,
       "currency": "USD",
       "averagePrice": 2.49940789,
-      "unrealizedPnl": 97.440789
+      "unrealizedPnl": 93.880789
     },
     {
       "contractId": 877994699,
@@ -1298,11 +1322,11 @@
       "description": "XE 16OCT26 25 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 9.6803,
-      "marketValue": -968.03,
+      "marketPrice": 9.5429,
+      "marketValue": -954.29,
       "currency": "USD",
       "averagePrice": 4.75738654,
-      "unrealizedPnl": -492.291346
+      "unrealizedPnl": -478.551346
     },
     {
       "contractId": 814414007,
@@ -1310,11 +1334,11 @@
       "description": "ZENA 15JAN27 5 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.7215,
-      "marketValue": -372.15,
+      "marketPrice": 3.7619,
+      "marketValue": -376.19,
       "currency": "USD",
       "averagePrice": 2.6495131,
-      "unrealizedPnl": -107.19869
+      "unrealizedPnl": -111.23869
     },
     {
       "contractId": 896046120,
@@ -1322,11 +1346,11 @@
       "description": "ZETA 07AUG26 20 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 3.3956,
-      "marketValue": -339.56,
+      "marketPrice": 3.0072,
+      "marketValue": -300.72,
       "currency": "USD",
       "averagePrice": 1.70942417,
-      "unrealizedPnl": -168.617583
+      "unrealizedPnl": -129.777583
     },
     {
       "contractId": 729000800,
@@ -1334,11 +1358,11 @@
       "description": "ZETA 15JAN27 25 C",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 4.05,
-      "marketValue": -405,
+      "marketPrice": 3.6,
+      "marketValue": -360,
       "currency": "USD",
       "averagePrice": 5.91936775,
-      "unrealizedPnl": 186.936775
+      "unrealizedPnl": 231.936775
     },
     {
       "contractId": 833074906,
@@ -1346,73 +1370,103 @@
       "description": "ZIM 17JUL26 25 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 1.095,
-      "marketValue": -109.5,
+      "marketPrice": 0.7191,
+      "marketValue": -71.91,
       "currency": "USD",
       "averagePrice": 1.69294958,
-      "unrealizedPnl": 59.794958
+      "unrealizedPnl": 97.384958
     }
   ],
   "recentTrades": [
     {
-      "tradeId": "1497677333",
-      "symbol": "ISRG",
+      "tradeId": "1499652859",
+      "symbol": "SPX",
       "secType": "OPT",
       "side": "SELL",
       "size": 1,
-      "price": 38.86,
-      "tradeTime": "2026-07-07T10:28:13Z",
-      "commission": 0.3134016,
-      "netAmount": 3886,
+      "price": 78.72,
+      "tradeTime": "2026-07-08T12:07:07Z",
+      "commission": 1.63028,
+      "netAmount": 7872,
       "realizedPnl": 0,
-      "expiry": "2026-12-18",
-      "strike": 470,
-      "putCall": "C"
+      "expiry": "2026-08-05",
+      "strike": 7340,
+      "putCall": "P"
     },
     {
-      "tradeId": "1497677265",
-      "symbol": "ISRG",
+      "tradeId": "1499652835",
+      "symbol": "SPX",
       "secType": "OPT",
       "side": "BUY",
       "size": 1,
-      "price": 33.61,
-      "tradeTime": "2026-07-07T10:28:13Z",
-      "commission": 0.23006,
-      "netAmount": 3361,
-      "realizedPnl": -2091.292812,
+      "price": 76.24,
+      "tradeTime": "2026-07-08T12:07:07Z",
+      "commission": 1.63028,
+      "netAmount": 7624,
+      "realizedPnl": 0,
+      "expiry": "2026-08-05",
+      "strike": 7330,
+      "putCall": "P"
+    },
+    {
+      "tradeId": "1499652799",
+      "symbol": "SPX",
+      "secType": "OPT",
+      "side": "BUY",
+      "size": 1,
+      "price": 45.69,
+      "tradeTime": "2026-07-08T12:07:07Z",
+      "commission": 1.63028,
+      "netAmount": 4569,
+      "realizedPnl": 0,
+      "expiry": "2026-08-05",
+      "strike": 7610,
+      "putCall": "C"
+    },
+    {
+      "tradeId": "1499652709",
+      "symbol": "SPX",
+      "secType": "OPT",
+      "side": "SELL",
+      "size": 1,
+      "price": 49.31,
+      "tradeTime": "2026-07-08T12:07:07Z",
+      "commission": 1.63028,
+      "netAmount": 4931,
+      "realizedPnl": 0,
+      "expiry": "2026-08-05",
+      "strike": 7600,
+      "putCall": "C"
+    },
+    {
+      "tradeId": "1499129874",
+      "symbol": "SPX",
+      "secType": "OPT",
+      "side": "SELL",
+      "size": 1,
+      "price": 2.83,
+      "tradeTime": "2026-07-08T09:30:02Z",
+      "commission": 1.70028,
+      "netAmount": 283,
+      "realizedPnl": -844.51103,
       "expiry": "2026-07-17",
-      "strike": 415,
+      "strike": 7660,
       "putCall": "C"
     },
     {
-      "tradeId": "1497677155",
-      "symbol": "ASTS",
-      "secType": "OPT",
-      "side": "SELL",
-      "size": 1,
-      "price": 4.51,
-      "tradeTime": "2026-07-07T10:28:05Z",
-      "commission": 1.0528606,
-      "netAmount": 451,
-      "realizedPnl": 0,
-      "expiry": "2026-08-21",
-      "strike": 60,
-      "putCall": "P"
-    },
-    {
-      "tradeId": "1497677215",
-      "symbol": "ASTS",
+      "tradeId": "1499129091",
+      "symbol": "SPX",
       "secType": "OPT",
       "side": "BUY",
       "size": 1,
-      "price": 3.01,
-      "tradeTime": "2026-07-07T10:28:05Z",
-      "commission": 1.04028,
-      "netAmount": 301,
-      "realizedPnl": 601.90768,
-      "expiry": "2026-08-21",
-      "strike": 55,
-      "putCall": "P"
+      "price": 3.58,
+      "tradeTime": "2026-07-08T09:30:02Z",
+      "commission": 1.70028,
+      "netAmount": 358,
+      "realizedPnl": 912.48897,
+      "expiry": "2026-07-17",
+      "strike": 7650,
+      "putCall": "C"
     }
   ]
 }
