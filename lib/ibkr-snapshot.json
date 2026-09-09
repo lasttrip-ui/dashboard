@@ -1,12 +1,12 @@
 {
-  "lastUpdated": "2026-09-08T00:33:02.208Z",
+  "lastUpdated": "2026-09-09T00:23:15.883Z",
   "summary": {
     "currency": "EUR",
-    "netLiquidation": 63201.08,
-    "equityWithLoanValue": 63201.08,
+    "netLiquidation": 61964.39,
+    "equityWithLoanValue": 61964.39,
     "buyingPower": 0,
     "grossPositionValue": 79422.77,
-    "totalCashValue": 31305.85,
+    "totalCashValue": 31286.45,
     "availableFunds": -470.51,
     "initialMargin": 36706.74,
     "maintenanceMargin": 32935.29,
@@ -74,11 +74,11 @@
       "description": "DIAGEO PLC",
       "assetClass": "STK",
       "position": 90,
-      "marketPrice": 16.57,
-      "marketValue": 1491.3,
+      "marketPrice": 16.3,
+      "marketValue": 1467,
       "currency": "GBP",
       "averagePrice": 16.958922222,
-      "unrealizedPnl": -35.003
+      "unrealizedPnl": -59.303
     },
     {
       "contractId": 871851368,
@@ -86,11 +86,11 @@
       "description": "SIGENERGY TECHNOLOGY CO LT-H",
       "assetClass": "STK",
       "position": 200,
-      "marketPrice": 361.2,
-      "marketValue": 72240,
+      "marketPrice": 320,
+      "marketValue": 64000,
       "currency": "HKD",
       "averagePrice": 442.8331467,
-      "unrealizedPnl": -16326.62934
+      "unrealizedPnl": -24566.62934
     },
     {
       "contractId": 674088730,
@@ -98,11 +98,11 @@
       "description": "UBTECH ROBOTICS CORP LTD-H",
       "assetClass": "STK",
       "position": 50,
-      "marketPrice": 85.65,
-      "marketValue": 4282.5,
+      "marketPrice": 85.55,
+      "marketValue": 4277.5,
       "currency": "HKD",
       "averagePrice": 115.494605,
-      "unrealizedPnl": -1492.23025
+      "unrealizedPnl": -1497.23025
     },
     {
       "contractId": 4725951,
@@ -770,11 +770,11 @@
       "description": "BATS 18SEP26 40 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.2375,
-      "marketValue": -237.5,
+      "marketPrice": 0.24,
+      "marketValue": -240,
       "currency": "GBP",
       "averagePrice": 0.2486,
-      "unrealizedPnl": 11.1
+      "unrealizedPnl": 8.6
     },
     {
       "contractId": 846117344,
@@ -782,11 +782,11 @@
       "description": "DGE 18DEC26 18.75 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 2.5375,
-      "marketValue": -2537.5,
+      "marketPrice": 2.7525,
+      "marketValue": -2752.5,
       "currency": "GBP",
       "averagePrice": 4.9486,
-      "unrealizedPnl": 2411.1
+      "unrealizedPnl": 2196.1
     },
     {
       "contractId": 843643908,
@@ -794,11 +794,11 @@
       "description": "LGEN 16OCT26 2.9 P",
       "assetClass": "OPT",
       "position": -1,
-      "marketPrice": 0.0525,
-      "marketValue": -52.5,
+      "marketPrice": 0.055,
+      "marketValue": -55,
       "currency": "GBP",
       "averagePrice": 0.0486,
-      "unrealizedPnl": -3.9
+      "unrealizedPnl": -6.4
     },
     {
       "contractId": 901726717,
